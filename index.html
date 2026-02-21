@@ -6,47 +6,54 @@
   <title>STAGEBILL - 뮤지컬 수업 자료 큐레이션</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <!-- Navigation -->
   <nav class="navbar" id="navbar">
-    <div class="nav-left">
+    <!-- Top row: Logo + Controls -->
+    <div class="nav-top">
       <a href="#" class="logo" onclick="resetView()">STAGEBILL</a>
-      <ul class="nav-links">
-        <li><a href="#" class="active" data-filter="all">전체</a></li>
-        <li><a href="#" data-filter="일상">일상</a></li>
-        <li><a href="#" data-filter="컬러">컬러</a></li>
-        <li><a href="#" data-filter="진로">진로</a></li>
-      </ul>
-    </div>
-    <div class="nav-right">
-      <div class="search-container" id="searchContainer">
-        <button class="search-btn" id="searchBtn" aria-label="검색">
-          <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        </button>
-        <input type="text" class="search-input" id="searchInput" placeholder="작품명, 해시태그, 키워드 검색...">
+      <div class="nav-right">
+        <div class="lang-switcher" id="langSwitcher">
+          <button class="lang-btn active" data-lang="ko">KO</button>
+          <button class="lang-btn" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="ja">JP</button>
+        </div>
+        <div class="search-container" id="searchContainer">
+          <button class="search-btn" id="searchBtn" aria-label="검색">
+            <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          </button>
+          <input type="text" class="search-input" id="searchInput" placeholder="작품명, 해시태그, 키워드 검색...">
+        </div>
       </div>
     </div>
+    <!-- Category links row -->
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#" class="active" data-filter="all">전체</a></li>
+      <li><a href="#" data-filter="일상">일상</a></li>
+      <li><a href="#" data-filter="컬러">컬러</a></li>
+      <li><a href="#" data-filter="진로">진로</a></li>
+    </ul>
   </nav>
 
   <!-- Hero Banner -->
   <section class="hero" id="heroBanner">
     <div class="hero-gradient"></div>
     <div class="hero-content">
-      <span class="hero-badge">STAGEBILL 추천</span>
+      <span class="hero-badge" data-i18n="hero.badge">STAGEBILL 추천</span>
       <h1 class="hero-title" id="heroTitle"></h1>
       <div class="hero-hashtags" id="heroHashtags"></div>
       <p class="hero-description" id="heroDescription"></p>
       <div class="hero-buttons">
         <button class="btn-primary" id="heroDetailBtn">
           <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-          자세히 보기
+          <span data-i18n="hero.detail">자세히 보기</span>
         </button>
         <button class="btn-secondary" id="heroRandomBtn">
           <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
-          랜덤 추천
+          <span data-i18n="hero.random">랜덤 추천</span>
         </button>
       </div>
     </div>
@@ -55,7 +62,7 @@
   <!-- Search Results (hidden by default) -->
   <section class="search-results-section" id="searchResults" style="display:none;">
     <div class="section-header">
-      <h2 id="searchResultTitle">검색 결과</h2>
+      <h2 id="searchResultTitle"></h2>
     </div>
     <div class="card-grid" id="searchResultGrid"></div>
   </section>
@@ -82,26 +89,31 @@
       </div>
       <div class="modal-body">
         <div class="modal-section">
-          <h3>작품 소개</h3>
+          <h3 data-i18n="modal.description">작품 소개</h3>
           <p id="modalDescription"></p>
         </div>
         <div class="modal-section">
-          <h3>추천 넘버</h3>
+          <h3 data-i18n="modal.numbers">추천 넘버</h3>
           <div class="number-list" id="modalNumbers"></div>
         </div>
         <div class="modal-section">
-          <h3>뮤지컬 수업 아이디어 노트</h3>
+          <h3 data-i18n="modal.ideaNotes">뮤지컬 수업 아이디어 노트</h3>
           <div class="idea-note" id="modalIdeaNotes"></div>
         </div>
         <div class="modal-section">
-          <h3>플레이리스트</h3>
+          <h3 data-i18n="modal.playlist">플레이리스트</h3>
           <a href="#" class="playlist-link" id="modalPlaylist" target="_blank" rel="noopener noreferrer">
             <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-            YouTube 플레이리스트 바로가기
+            <span data-i18n="modal.playlistLink">YouTube 플레이리스트 바로가기</span>
           </a>
         </div>
+        <!-- References section (shown only when references exist) -->
+        <div class="modal-section" id="modalReferencesSection" style="display:none;">
+          <h3 data-i18n="modal.references">참고자료</h3>
+          <div class="reference-list" id="modalReferences"></div>
+        </div>
         <div class="modal-section">
-          <h3>해시태그</h3>
+          <h3 data-i18n="modal.hashtags">해시태그</h3>
           <div class="hashtag-list" id="modalHashtags"></div>
         </div>
       </div>
@@ -112,7 +124,7 @@
   <footer class="footer">
     <div class="footer-content">
       <div class="footer-logo">STAGEBILL</div>
-      <p class="footer-description">교실에서 시작하는 뮤지컬 수업</p>
+      <p class="footer-description" data-i18n="footer.description">교실에서 시작하는 뮤지컬 수업</p>
       <p class="footer-copyright">
         <a href="https://litt.ly/stage" target="_blank" rel="noopener noreferrer">&copy; 2026 경기도뮤지컬교육연구회 STAGE.</a>
       </p>

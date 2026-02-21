@@ -31,7 +31,7 @@ html {
 }
 
 body {
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Noto Sans KR', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   overflow-x: hidden;
@@ -60,14 +60,12 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: var(--nav-height);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 4%;
   z-index: 1000;
   background: transparent;
   transition: background var(--transition);
+  padding: 0 4%;
+  display: flex;
+  flex-direction: column;
 }
 
 .navbar.scrolled {
@@ -76,30 +74,45 @@ body {
   box-shadow: 0 2px 20px rgba(0,0,0,0.5);
 }
 
-.nav-left {
+/* Top row: Logo + right controls */
+.nav-top {
+  height: var(--nav-height);
   display: flex;
   align-items: center;
-  gap: 40px;
+  justify-content: space-between;
 }
 
-.logo {
-  font-size: 1.8rem;
-  font-weight: 900;
-  color: var(--accent);
-  text-decoration: none;
-  letter-spacing: 3px;
-  cursor: pointer;
-  transition: transform var(--transition);
-}
-
-.logo:hover {
-  transform: scale(1.05);
-}
-
+/* Category links row (PC: same line as logo; Mobile: own row) */
 .nav-links {
   display: flex;
   list-style: none;
   gap: 24px;
+  /* On PC, pull into the same visual row by adding left margin after logo */
+  margin-left: 40px;
+  /* Visually inline with logo on desktop via flex in nav-top */
+  align-items: center;
+  height: var(--nav-height);
+}
+
+/* On desktop, move nav-links beside the logo by re-ordering layout */
+.nav-top .logo {
+  flex-shrink: 0;
+}
+
+/* We'll keep nav-links in a second row by default and override for desktop */
+.nav-links {
+  height: auto;
+  margin-left: 0;
+  padding: 0 0 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  flex-wrap: nowrap;
+  gap: 20px;
+}
+
+.nav-links::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-links a {
@@ -110,6 +123,7 @@ body {
   transition: color var(--transition);
   position: relative;
   padding-bottom: 4px;
+  white-space: nowrap;
 }
 
 .nav-links a:hover,
@@ -131,6 +145,74 @@ body {
 .nav-right {
   display: flex;
   align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* On desktop, collapse the second nav-links row into the top row */
+@media (min-width: 769px) {
+  .navbar {
+    flex-direction: row;
+    align-items: center;
+    height: var(--nav-height);
+    padding: 0 4%;
+  }
+
+  .nav-top {
+    height: auto;
+    flex: 0 0 auto;
+    gap: 40px;
+  }
+
+  .nav-links {
+    flex: 1;
+    height: auto;
+    padding: 0;
+    overflow-x: visible;
+    flex-wrap: nowrap;
+    gap: 24px;
+    border-top: none;
+    padding-bottom: 0;
+    order: 0;
+  }
+
+  .nav-right {
+    order: 1;
+    margin-left: auto;
+  }
+}
+
+/* ========== Language Switcher ========== */
+.lang-switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 20px;
+  padding: 3px;
+}
+
+.lang-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all var(--transition);
+  letter-spacing: 0.5px;
+}
+
+.lang-btn:hover {
+  color: var(--text-primary);
+}
+
+.lang-btn.active {
+  background: var(--accent);
+  color: #fff;
 }
 
 /* ========== Search ========== */
@@ -283,6 +365,7 @@ body {
 .hero-buttons {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .btn-primary,
@@ -298,6 +381,7 @@ body {
   font-weight: 700;
   cursor: pointer;
   transition: all var(--transition);
+  white-space: nowrap;
 }
 
 .btn-primary {
@@ -649,6 +733,7 @@ body {
   height: 18px;
   background: var(--accent);
   border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .modal-section p {
@@ -732,6 +817,39 @@ body {
   background: rgba(255,0,0,0.3);
 }
 
+/* Reference Links */
+.reference-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reference-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  background: rgba(255,255,255,0.05);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: all var(--transition);
+  width: fit-content;
+}
+
+.reference-link:hover {
+  background: rgba(255,255,255,0.12);
+  color: var(--text-primary);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.reference-link svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
 /* Hashtags */
 .hashtag-list {
   display: flex;
@@ -797,19 +915,43 @@ body {
 .category-컬러 { background: #E91E63; }
 .category-진로 { background: #43A047; }
 
-/* ========== Responsive ========== */
+/* ========== Responsive - Tablet (≤768px) ========== */
 @media (max-width: 768px) {
+  /* Navbar: two-row layout (top: logo+controls, bottom: category links) */
+  .navbar {
+    flex-direction: column;
+    padding: 0 4%;
+  }
+
+  .nav-top {
+    height: 56px;
+  }
+
   .nav-links {
-    gap: 14px;
+    height: auto;
+    padding: 0 0 10px;
+    gap: 20px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
-  .nav-links a {
-    font-size: 0.8rem;
+  .nav-links::-webkit-scrollbar {
+    display: none;
   }
 
+  /* Push hero content down to account for taller navbar */
   .hero {
     height: 70vh;
-    min-height: 400px;
+    min-height: 380px;
+    padding-top: 104px; /* 56px top row + ~48px nav-links row */
+    align-items: flex-end;
+  }
+
+  .hero-content {
+    padding: 0 4% 10%;
+    max-width: 100%;
   }
 
   .hero-title {
@@ -821,17 +963,22 @@ body {
     -webkit-line-clamp: 2;
   }
 
+  /* Buttons: side by side but smaller, not stacked */
   .hero-buttons {
-    flex-direction: column;
+    gap: 10px;
+    flex-wrap: nowrap;
   }
 
   .btn-primary,
   .btn-secondary {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    flex: 1;
     justify-content: center;
-    padding: 12px 20px;
-    font-size: 0.9rem;
+    min-width: 0;
   }
 
+  /* Cards */
   .card {
     width: 180px;
   }
@@ -840,13 +987,25 @@ body {
     font-size: 1.1rem;
   }
 
+  /* Modal */
+  .modal-overlay {
+    padding: 20px 12px;
+    align-items: flex-end;
+  }
+
   .modal {
     margin: 0;
-    border-radius: 12px 12px 0 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+    overflow-y: auto;
   }
 
   .modal-hero {
     height: 200px;
+  }
+
+  .modal-hero.has-image {
+    height: 280px;
   }
 
   .modal-hero-content h1 {
@@ -857,34 +1016,77 @@ body {
     padding: 10px 20px 30px;
   }
 
+  /* Search input */
   .search-container.active .search-input {
-    width: 180px;
+    width: 160px;
   }
 
+  /* Content rows */
   .content-row .row-title {
     font-size: 1.1rem;
   }
+
+  /* Lang switcher */
+  .lang-btn {
+    font-size: 0.68rem;
+    padding: 4px 8px;
+  }
 }
 
+/* ========== Responsive - Mobile (≤480px) ========== */
 @media (max-width: 480px) {
-  .nav-left {
-    gap: 16px;
+  .nav-top {
+    height: 50px;
   }
 
   .logo {
     font-size: 1.3rem;
+    letter-spacing: 2px;
+  }
+
+  .nav-links {
+    gap: 16px;
+  }
+
+  .nav-links a {
+    font-size: 0.8rem;
+  }
+
+  .hero {
+    height: 65vh;
+    min-height: 360px;
+    padding-top: 96px;
   }
 
   .hero-title {
     font-size: 1.6rem;
   }
 
+  .hero-badge {
+    font-size: 0.65rem;
+  }
+
+  /* Buttons stay side by side even on smallest screens */
+  .btn-primary,
+  .btn-secondary {
+    padding: 9px 12px;
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+
+  .btn-primary svg,
+  .btn-secondary svg {
+    width: 18px;
+    height: 18px;
+  }
+
   .card {
-    width: 150px;
+    width: 145px;
   }
 
   .card-thumbnail .card-title-display {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    padding: 12px;
   }
 
   .card-info {
@@ -893,6 +1095,53 @@ body {
 
   .card-info-title {
     font-size: 0.8rem;
+  }
+
+  .card-info-meta {
+    font-size: 0.68rem;
+    gap: 4px;
+  }
+
+  .card-category-badge {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+  }
+
+  .search-container.active .search-input {
+    width: 130px;
+    font-size: 0.8rem;
+  }
+
+  .lang-switcher {
+    gap: 2px;
+  }
+
+  .lang-btn {
+    font-size: 0.65rem;
+    padding: 3px 7px;
+  }
+
+  /* Modal on tiny screens */
+  .modal-hero-content {
+    padding: 20px;
+  }
+
+  .modal-hero-content h1 {
+    font-size: 1.4rem;
+  }
+
+  .modal-body {
+    padding: 10px 16px 24px;
+  }
+
+  .number-item {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
   }
 }
 
