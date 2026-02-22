@@ -136,6 +136,26 @@ function getCategoryLabel(cat) {
   return (CATEGORY_MAP[cat] && CATEGORY_MAP[cat][currentLang]) || cat;
 }
 
+// Extracts YouTube video ID from a single-video URL.
+// Returns null for playlists (youtube.com/playlist?list=...) or non-YouTube URLs.
+function getYouTubeVideoId(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
+    if (u.hostname.includes('youtube.com') && u.pathname === '/watch') return u.searchParams.get('v') || null;
+  } catch(e) {}
+  return null;
+}
+
+function makeVideoEmbed(videoId) {
+  return `<div class="video-embed-container">
+    <iframe src="https://www.youtube.com/embed/${videoId}"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowfullscreen frameborder="0" loading="lazy"></iframe>
+  </div>`;
+}
+
 // Parses references from either an already-parsed array (Apps Script v2)
 // or a raw string (Apps Script v1 / fallback). Format: "title::url|title2::url2"
 function parseReferences(raw) {
@@ -713,11 +733,20 @@ function openModal(m) {
   // Idea Notes (translated if available)
   document.getElementById('modalIdeaNotes').textContent = getLocalizedField(m, 'ideaNotes');
 
-  // Playlist
+  // 참고 영상: 단일 YouTube 동영상이면 embed, 플레이리스트·기타는 링크 버튼
   const playlistEl = document.getElementById('modalPlaylist');
-  playlistEl.href = m.playlistLink;
+  playlistEl.href = m.playlistLink || '#';
   const playlistSpan = playlistEl.querySelector('span[data-i18n]');
   if (playlistSpan) playlistSpan.textContent = t('modal.playlistLink');
+  const playlistEmbed = document.getElementById('playlistEmbed');
+  const plVideoId = getYouTubeVideoId(m.playlistLink);
+  if (plVideoId) {
+    playlistEmbed.innerHTML = makeVideoEmbed(plVideoId);
+    playlistEl.style.display = 'none';
+  } else {
+    playlistEmbed.innerHTML = '';
+    playlistEl.style.display = '';
+  }
 
   // References
   const refsSection = document.getElementById('modalReferencesSection');
@@ -729,12 +758,22 @@ function openModal(m) {
   console.log('[STAGEBILL] references raw:', JSON.stringify(m.references), '→ parsed:', refs.length + '개');
   if (refs.length > 0) {
     refsSection.style.display = 'block';
-    refsEl.innerHTML = refs.map(ref => `
-      <a href="${ref.url}" class="reference-link" target="_blank" rel="noopener noreferrer">
+    refsEl.innerHTML = refs.map(ref => {
+      const refVideoId = getYouTubeVideoId(ref.url);
+      if (refVideoId) {
+        return `<div class="ref-embed-item">
+          <div class="ref-embed-title">
+            <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+            <a href="${ref.url}" target="_blank" rel="noopener noreferrer" class="ref-embed-link">${ref.title}</a>
+          </div>
+          ${makeVideoEmbed(refVideoId)}
+        </div>`;
+      }
+      return `<a href="${ref.url}" class="reference-link" target="_blank" rel="noopener noreferrer">
         <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
         ${ref.title}
-      </a>
-    `).join('');
+      </a>`;
+    }).join('');
   } else {
     refsSection.style.display = 'none';
   }
