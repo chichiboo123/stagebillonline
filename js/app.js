@@ -383,8 +383,9 @@ function hideSearchResults() {
 // Hero Banner
 // ==========================================
 function setRandomHero() {
-  const idx = Math.floor(Math.random() * musicals.length);
-  const m = musicals[idx];
+  const pool = musicals.filter(m => m.title && m.description);
+  if (pool.length === 0) return;
+  const m = pool[Math.floor(Math.random() * pool.length)];
   currentHeroMusical = m;
 
   const hero = document.getElementById('heroBanner');
@@ -452,26 +453,20 @@ function renderContentRows(filter) {
   let filtered = filter === 'all' ? musicals : musicals.filter(m => m.category === filter);
 
   if (filter === 'all') {
-    // Group by category
+    // "Today's Pick" row — only musicals with actual content
+    const validMusicals = musicals.filter(m => m.title && m.description);
+    if (validMusicals.length > 0) {
+      const shuffled = [...validMusicals].sort(() => Math.random() - 0.5);
+      area.appendChild(createRow(t('row.todayPick'), shuffled));
+    }
+
+    // Category rows — only categories that have data
     const categories = [...new Set(musicals.map(m => m.category))];
-
-    // "Today's Pick" row with random shuffle
-    const shuffled = [...musicals].sort(() => Math.random() - 0.5);
-    area.appendChild(createRow(t('row.todayPick'), shuffled));
-
-    // Category rows
     categories.forEach(cat => {
       const items = musicals.filter(m => m.category === cat);
-      const label = getCategoryLabel(cat);
-      area.appendChild(createRow(`${getCategoryEmoji(cat)} ${label}`, items));
-    });
-
-    // "Curator's Choice" row
-    const curators = [...new Set(musicals.map(m => m.curator))];
-    curators.forEach(cur => {
-      const items = musicals.filter(m => m.curator === cur);
       if (items.length > 0) {
-        area.appendChild(createRow(`${cur}${t('row.curatorPick')}`, items));
+        const label = getCategoryLabel(cat);
+        area.appendChild(createRow(`${getCategoryEmoji(cat)} ${label}`, items));
       }
     });
   } else {
@@ -694,7 +689,7 @@ function openModal(m) {
   if (refHeader) refHeader.textContent = t('modal.references');
 
   if (m.references && m.references.length > 0) {
-    refsSection.style.display = '';
+    refsSection.style.display = 'block';
     refsEl.innerHTML = m.references.map(ref => `
       <a href="${ref.url}" class="reference-link" target="_blank" rel="noopener noreferrer">
         <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
