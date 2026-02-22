@@ -136,6 +136,32 @@ function getCategoryLabel(cat) {
   return (CATEGORY_MAP[cat] && CATEGORY_MAP[cat][currentLang]) || cat;
 }
 
+// Parses references from either an already-parsed array (Apps Script v2)
+// or a raw string (Apps Script v1 / fallback). Format: "title::url|title2::url2"
+function parseReferences(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    // Already parsed — filter out entries missing url
+    return raw.filter(r => r && r.url);
+  }
+  const str = String(raw).trim();
+  if (!str) return [];
+  return str.split('|').map(r => {
+    const trimmed = r.trim();
+    if (!trimmed) return null;
+    if (trimmed.includes('::')) {
+      const sepIdx = trimmed.indexOf('::');
+      const title = trimmed.substring(0, sepIdx).trim();
+      const url   = trimmed.substring(sepIdx + 2).trim();
+      return (url) ? { title: title || '참고 링크', url } : null;
+    }
+    if (trimmed.startsWith('http')) {
+      return { title: '참고 링크', url: trimmed };
+    }
+    return null;
+  }).filter(Boolean);
+}
+
 // Returns translated field value if available, falls back to Korean original.
 // Expects spreadsheet to supply e.g. description_en, description_ja,
 // ideaNotes_en, ideaNotes_ja fields from GOOGLETRANSLATE columns.
@@ -699,9 +725,11 @@ function openModal(m) {
   const refHeader = refsSection.querySelector('h3[data-i18n]');
   if (refHeader) refHeader.textContent = t('modal.references');
 
-  if (m.references && m.references.length > 0) {
+  const refs = parseReferences(m.references);
+  console.log('[STAGEBILL] references raw:', JSON.stringify(m.references), '→ parsed:', refs.length + '개');
+  if (refs.length > 0) {
     refsSection.style.display = 'block';
-    refsEl.innerHTML = m.references.map(ref => `
+    refsEl.innerHTML = refs.map(ref => `
       <a href="${ref.url}" class="reference-link" target="_blank" rel="noopener noreferrer">
         <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
         ${ref.title}
