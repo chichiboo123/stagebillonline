@@ -922,9 +922,14 @@ body {
 }
 
 /* ========== Category Colors ========== */
-.category-일상 { background: #1E88E5; }
-.category-컬러 { background: #E91E63; }
+.category-과학 { background: #00ACC1; }
+.category-가족 { background: #FF7043; }
 .category-진로 { background: #43A047; }
+.category-힐링 { background: #7E57C2; }
+.category-일상 { background: #1E88E5; }
+.category-성장 { background: #F4511E; }
+.category-결실 { background: #8D6E63; }
+.category-컬러 { background: #E91E63; }
 
 /* ========== Responsive - Tablet (≤768px) ========== */
 @media (max-width: 768px) {
@@ -1163,6 +1168,81 @@ body {
   .card-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 12px;
+  }
+}
+
+/* ========== Landscape Mode (phone horizontal) ========== */
+/* Targets phones in landscape where height is tight (≤500px) */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Revert navbar to single row — no room for two rows in landscape */
+  .navbar {
+    flex-direction: row;
+    align-items: center;
+    height: 50px;
+    padding: 0 3%;
+  }
+
+  .nav-top {
+    height: 50px;
+    flex: 1;
+    gap: 16px;
+  }
+
+  .nav-links {
+    flex: 1;
+    height: auto;
+    padding: 0;
+    border-top: none;
+    overflow-x: auto;
+    gap: 14px;
+    scrollbar-width: none;
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hero: compact, no fixed height */
+  .hero {
+    height: auto;
+    min-height: 0;
+    padding-top: 50px; /* match navbar height */
+    padding-bottom: 0;
+  }
+
+  .hero-content {
+    padding: 16px 4% 20px;
+    max-width: 100%;
+  }
+
+  /* Hide long description to save space */
+  .hero-description {
+    display: none;
+  }
+
+  /* Buttons: always horizontal, compact */
+  .hero-buttons {
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    flex: 0 0 auto;
+  }
+
+  /* Content starts right below hero — no overlap */
+  .content-area {
+    margin-top: 0;
+    z-index: 3;
+  }
+
+  /* Cards slightly smaller in landscape */
+  .card {
+    width: 140px;
   }
 }
 
