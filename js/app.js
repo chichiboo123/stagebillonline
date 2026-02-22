@@ -28,8 +28,8 @@ const translations = {
     'modal.description': '작품 소개',
     'modal.numbers': '추천 넘버',
     'modal.ideaNotes': '뮤지컬 수업 아이디어 노트',
-    'modal.playlist': '플레이리스트',
-    'modal.playlistLink': 'YouTube 플레이리스트 바로가기',
+    'modal.playlist': '참고 영상',
+    'modal.playlistLink': 'YouTube에서 보기',
     'modal.references': '참고자료',
     'modal.hashtags': '해시태그',
     'modal.curator': '큐레이터',
@@ -62,8 +62,8 @@ const translations = {
     'modal.description': 'About',
     'modal.numbers': 'Recommended Numbers',
     'modal.ideaNotes': 'Class Idea Notes',
-    'modal.playlist': 'Playlist',
-    'modal.playlistLink': 'Go to YouTube Playlist',
+    'modal.playlist': 'Reference Video',
+    'modal.playlistLink': 'Watch on YouTube',
     'modal.references': 'References',
     'modal.hashtags': 'Hashtags',
     'modal.curator': 'Curator',
@@ -96,8 +96,8 @@ const translations = {
     'modal.description': '作品紹介',
     'modal.numbers': 'おすすめナンバー',
     'modal.ideaNotes': '授業アイデアノート',
-    'modal.playlist': 'プレイリスト',
-    'modal.playlistLink': 'YouTubeプレイリストへ',
+    'modal.playlist': '参考動画',
+    'modal.playlistLink': 'YouTubeで見る',
     'modal.references': '参考資料',
     'modal.hashtags': 'ハッシュタグ',
     'modal.curator': 'キュレーター',
@@ -228,7 +228,7 @@ function setupLangSwitcher() {
 // ==========================================
 // Data Loading
 // ==========================================
-const DATA_URL = 'https://script.google.com/macros/s/AKfycbynkJtbirN3-nFW-ZCxif-Zn0h-lpbeQJeWhCkinDYXZbcwzTktMnsOVpt4WWRk6gAocA/exec';
+const DATA_URL = 'https://script.google.com/macros/s/AKfycbzpN9MNW3FpUwco4qCc4OZkv1nUi2GLyi58LBAq3MoZG8lo9X-qb-ZfzPbiFUzfx_n2Wg/exec';
 
 async function loadData() {
   try {
