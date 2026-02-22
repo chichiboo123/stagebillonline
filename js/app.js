@@ -217,12 +217,31 @@ function setupLangSwitcher() {
 const DATA_URL = 'https://script.google.com/macros/s/AKfycby1jFiXdvlCBobh5FKRPAME1_Wfr57FGIMigQ7aJf_8T7awztqk0jwPlx1YBlDoyV4e4A/exec';
 
 async function loadData() {
+  // ── 1차 시도: Google Apps Script ──────────────────────────────────────
   try {
-    const response = await fetch(DATA_URL);
-    musicals = await response.json();
+    console.log('[STAGEBILL] Apps Script 로딩 시작:', DATA_URL);
+    const res = await fetch(`${DATA_URL}?t=${Date.now()}`, { redirect: 'follow' });
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) throw new Error('빈 배열 또는 잘못된 형식');
+    musicals = data;
+    console.log(`[STAGEBILL] Apps Script 로딩 성공 (${musicals.length}개)`);
     initApp();
+    return;
   } catch (err) {
-    console.error('데이터 로딩 실패:', err);
+    console.warn('[STAGEBILL] Apps Script 연결 실패 →', err.message);
+    console.warn('  → Apps Script 배포 설정을 확인하세요 (실행자: 나, 액세스: 모든 사용자)');
+  }
+
+  // ── 2차 시도: 로컬 JSON (폴백) ────────────────────────────────────────
+  try {
+    console.log('[STAGEBILL] 로컬 JSON 폴백 시도...');
+    const res = await fetch('data/musicals.json');
+    musicals = await res.json();
+    console.warn('[STAGEBILL] 로컬 JSON 폴백 사용 중 — Apps Script 연결을 확인하세요');
+    initApp();
+  } catch (fbErr) {
+    console.error('[STAGEBILL] 데이터 로딩 완전 실패:', fbErr);
   }
 }
 
