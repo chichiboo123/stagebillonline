@@ -94,9 +94,20 @@ body {
   height: var(--nav-height);
 }
 
-/* On desktop, move nav-links beside the logo by re-ordering layout */
-.nav-top .logo {
+/* Logo */
+.logo {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--accent);
+  text-decoration: none;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: transform var(--transition);
   flex-shrink: 0;
+}
+
+.logo:hover {
+  transform: scale(1.05);
 }
 
 /* We'll keep nav-links in a second row by default and override for desktop */
@@ -405,7 +416,7 @@ body {
 /* ========== Content Rows ========== */
 .content-area {
   position: relative;
-  z-index: 5;
+  z-index: 4;
   margin-top: -80px;
   padding-bottom: 60px;
 }
@@ -1026,6 +1037,12 @@ body {
     font-size: 1.1rem;
   }
 
+  /* Fix: no negative overlap on mobile so content-area never covers hero buttons */
+  .content-area {
+    margin-top: 0;
+    z-index: 3;
+  }
+
   /* Lang switcher */
   .lang-btn {
     font-size: 0.68rem;
@@ -1137,6 +1154,10 @@ body {
   .number-item {
     padding: 10px 12px;
     gap: 10px;
+  }
+
+  .content-area {
+    margin-top: 0;
   }
 
   .card-grid {
