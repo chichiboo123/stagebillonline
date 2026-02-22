@@ -197,6 +197,27 @@ function getLocalizedHashtags(m) {
   return (localized && localized.length > 0) ? localized : (m.hashtags || []);
 }
 
+// Returns localized recommended numbers array.
+// number1 supports _en/_jp translation columns; number2 is Korean-only.
+// Falls back to old recommendedNumbers array format for legacy data.
+function getLocalizedNumbers(m) {
+  const suffix = currentLang === 'ko' ? '' : (currentLang === 'ja' ? '_jp' : '_en');
+  const numbers = [];
+  if (m.number1_title) {
+    const title = (suffix && m[`number1_title${suffix}`]) || m.number1_title;
+    const desc  = (suffix && m[`number1_desc${suffix}`])  || m.number1_desc || '';
+    numbers.push({ title, description: desc });
+  }
+  if (m.number2_title) {
+    numbers.push({ title: m.number2_title, description: m.number2_desc || '' });
+  }
+  // Fallback: old array format
+  if (numbers.length === 0 && Array.isArray(m.recommendedNumbers) && m.recommendedNumbers.length > 0) {
+    return m.recommendedNumbers;
+  }
+  return numbers;
+}
+
 function applyI18n() {
   // Update all data-i18n elements
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -315,6 +336,7 @@ function initApp() {
   setRandomHero();
   renderContentRows('all');
   setupModal();
+  setupUpload();
   applyI18n();
 }
 
@@ -397,9 +419,16 @@ function performSearch(query) {
     const allHashtags = [...(m.hashtags||[]), ...(m.hashtags_en||[]), ...(m.hashtags_ja||[])];
     const hashtagMatch = allHashtags.some(h => h.toLowerCase().includes(q));
     const ideaMatch = m.ideaNotes.toLowerCase().includes(q);
-    const numberMatch = m.recommendedNumbers.some(n =>
-      n.title.toLowerCase().includes(q) || n.description.toLowerCase().includes(q)
-    );
+    const numTexts = [
+      m.number1_title||'', m.number1_desc||'',
+      m.number1_title_en||'', m.number1_desc_en||'',
+      m.number1_title_jp||'', m.number1_desc_jp||'',
+      m.number2_title||'', m.number2_desc||'',
+      ...(Array.isArray(m.recommendedNumbers)
+        ? m.recommendedNumbers.flatMap(n => [n.title||'', n.description||''])
+        : []),
+    ];
+    const numberMatch = numTexts.some(f => f.toLowerCase().includes(q));
     const titleAllLang = [m.title, m.title_en||'', m.title_ja||''].join(' ').toLowerCase();
     return titleAllLang.includes(q) || descMatch || categoryMatch || curatorMatch || hashtagMatch || ideaMatch || numberMatch;
   });
@@ -718,9 +747,10 @@ function openModal(m) {
   // Description (translated if available)
   document.getElementById('modalDescription').textContent = getLocalizedField(m, 'description');
 
-  // Recommended Numbers
+  // Recommended Numbers (localized)
   const numbersEl = document.getElementById('modalNumbers');
-  numbersEl.innerHTML = m.recommendedNumbers.map((n, i) => `
+  const localizedNumbers = getLocalizedNumbers(m);
+  numbersEl.innerHTML = localizedNumbers.map((n, i) => `
     <div class="number-item">
       <span class="number-index">${i + 1}</span>
       <div class="number-info">
@@ -796,6 +826,104 @@ function closeModal() {
   currentModalMusical = null;
   // Go back in history to remove the state we pushed on openModal
   history.back();
+}
+
+// ==========================================
+// Upload
+// ==========================================
+function setupUpload() {
+  const btn     = document.getElementById('uploadBtn');
+  const overlay = document.getElementById('uploadOverlay');
+  const closeBtn = document.getElementById('uploadClose');
+  const pwdInput = document.getElementById('uploadPassword');
+  const pwdBtn   = document.getElementById('uploadPasswordBtn');
+  const form     = document.getElementById('uploadForm');
+
+  btn.addEventListener('click', () => {
+    overlay.classList.add('active');
+    document.getElementById('uploadPasswordStep').style.display = '';
+    document.getElementById('uploadFormStep').style.display = 'none';
+    document.getElementById('uploadPwdError').textContent = '';
+    document.getElementById('uploadResult').textContent = '';
+    pwdInput.value = '';
+    setTimeout(() => pwdInput.focus(), 80);
+  });
+
+  closeBtn.addEventListener('click', closeUpload);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeUpload(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.classList.contains('active')) closeUpload();
+  });
+
+  pwdBtn.addEventListener('click', checkUploadPassword);
+  pwdInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkUploadPassword(); });
+  form.addEventListener('submit', handleUploadSubmit);
+}
+
+function closeUpload() {
+  document.getElementById('uploadOverlay').classList.remove('active');
+}
+
+function checkUploadPassword() {
+  const pwd = document.getElementById('uploadPassword').value;
+  if (pwd === 'stage') {
+    document.getElementById('uploadPasswordStep').style.display = 'none';
+    document.getElementById('uploadFormStep').style.display = '';
+  } else {
+    const err = document.getElementById('uploadPwdError');
+    err.textContent = '비밀번호가 올바르지 않습니다.';
+    document.getElementById('uploadPassword').value = '';
+    document.getElementById('uploadPassword').focus();
+  }
+}
+
+async function handleUploadSubmit(e) {
+  e.preventDefault();
+  const resultEl = document.getElementById('uploadResult');
+  const submitBtn = e.target.querySelector('.upload-submit-btn');
+
+  // Collect form data
+  const fd = new FormData(e.target);
+  const data = {};
+  fd.forEach((val, key) => { if (String(val).trim()) data[key] = String(val).trim(); });
+
+  // Validate required fields
+  if (!data.title || !data.category || !data.curator || !data.year) {
+    resultEl.textContent = '⚠️ 필수 항목(작품명, 카테고리, 큐레이터, 작품 연도)을 모두 입력해주세요.';
+    resultEl.className = 'upload-result error';
+    return;
+  }
+
+  // Parse hashtags string into array
+  if (data.hashtags) {
+    data.hashtags = data.hashtags.split(/[,，]/).map(h => h.trim()).filter(Boolean);
+  }
+  if (!data.curationYear) data.curationYear = String(new Date().getFullYear());
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = '업로드 중...';
+  resultEl.textContent = '';
+  resultEl.className = 'upload-result';
+
+  try {
+    // Apps Script is called via GET params to ensure CORS compatibility
+    const params = new URLSearchParams({ action: 'upload', password: 'stage' });
+    Object.entries(data).forEach(([k, v]) => {
+      params.set(k, Array.isArray(v) ? v.join(',') : v);
+    });
+    const res = await fetch(`${DATA_URL}?${params.toString()}`, { redirect: 'follow' });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    resultEl.textContent = '✅ 업로드 성공! 스프레드시트에 추가되었습니다.';
+    resultEl.className = 'upload-result success';
+    e.target.reset();
+  } catch (err) {
+    resultEl.textContent = `❌ 오류: ${err.message}`;
+    resultEl.className = 'upload-result error';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '업로드';
+  }
 }
 
 // ==========================================
