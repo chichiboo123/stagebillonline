@@ -145,6 +145,12 @@ function getLocalizedField(m, fieldKey) {
   return (translated && String(translated).trim()) ? String(translated) : (m[fieldKey] || '');
 }
 
+function getLocalizedHashtags(m) {
+  if (currentLang === 'ko') return m.hashtags || [];
+  const localized = m[`hashtags_${currentLang}`];
+  return (localized && localized.length > 0) ? localized : (m.hashtags || []);
+}
+
 function applyI18n() {
   // Update all data-i18n elements
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -334,12 +340,14 @@ function performSearch(query) {
     const descMatch = m.description.toLowerCase().includes(q);
     const categoryMatch = m.category.toLowerCase().includes(q);
     const curatorMatch = m.curator.toLowerCase().includes(q);
-    const hashtagMatch = m.hashtags.some(h => h.toLowerCase().includes(q));
+    const allHashtags = [...(m.hashtags||[]), ...(m.hashtags_en||[]), ...(m.hashtags_ja||[])];
+    const hashtagMatch = allHashtags.some(h => h.toLowerCase().includes(q));
     const ideaMatch = m.ideaNotes.toLowerCase().includes(q);
     const numberMatch = m.recommendedNumbers.some(n =>
       n.title.toLowerCase().includes(q) || n.description.toLowerCase().includes(q)
     );
-    return titleMatch || descMatch || categoryMatch || curatorMatch || hashtagMatch || ideaMatch || numberMatch;
+    const titleAllLang = [m.title, m.title_en||'', m.title_ja||''].join(' ').toLowerCase();
+    return titleAllLang.includes(q) || descMatch || categoryMatch || curatorMatch || hashtagMatch || ideaMatch || numberMatch;
   });
 
   showSearchResults(results, query);
@@ -407,11 +415,11 @@ function setRandomHero() {
     `;
   }
 
-  document.getElementById('heroTitle').textContent = m.title;
+  document.getElementById('heroTitle').textContent = getLocalizedField(m, 'title');
   document.getElementById('heroDescription').textContent = m.description;
 
   const hashtagsEl = document.getElementById('heroHashtags');
-  hashtagsEl.innerHTML = m.hashtags.slice(0, 5).map(h =>
+  hashtagsEl.innerHTML = getLocalizedHashtags(m).slice(0, 5).map(h =>
     `<span class="hashtag" onclick="searchByHashtag('${h}')">${h}</span>`
   ).join('');
 
@@ -508,7 +516,7 @@ function createRow(title, items) {
 // ==========================================
 function createCardHTML(m) {
   const categoryClass = `category-${m.category}`;
-  const hashtags = m.hashtags.slice(0, 3).map(h =>
+  const hashtags = getLocalizedHashtags(m).slice(0, 3).map(h =>
     `<span class="hashtag-sm" onclick="event.stopPropagation(); searchByHashtag('${h}')">${h}</span>`
   ).join('');
 
@@ -528,10 +536,10 @@ function createCardHTML(m) {
         ${thumbnailInner}
       </div>
       <div class="card-info">
-        <div class="card-info-title">${m.title}</div>
+        <div class="card-info-title">${getLocalizedField(m, 'title')}</div>
         <div class="card-info-meta">
           <span class="card-category-badge ${categoryClass}">${catLabel}</span>
-          <span>${m.curationYear || m.year}</span>
+          <span>${m.curationYear}</span>
         </div>
         <div class="card-hashtags">${hashtags}</div>
       </div>
@@ -607,7 +615,7 @@ function openModal(m) {
     modalHero.classList.remove('has-image');
   }
 
-  document.getElementById('modalTitle').textContent = m.title;
+  document.getElementById('modalTitle').textContent = getLocalizedField(m, 'title');
 
   const catEl = document.getElementById('modalCategory');
   catEl.textContent = getCategoryLabel(m.category);
@@ -616,8 +624,7 @@ function openModal(m) {
   document.getElementById('modalCurator').textContent = `${t('modal.curator')}: ${m.curator}`;
 
   const yearEl = document.getElementById('modalYear');
-  const curationYear = m.curationYear || m.year;
-  yearEl.textContent = `${t('modal.curationYear')}: ${curationYear}`;
+  yearEl.textContent = `${t('modal.curationYear')}: ${m.curationYear}`;
 
   // i18n for section headers
   document.querySelectorAll('.modal-section h3[data-i18n]').forEach(el => {
@@ -702,7 +709,7 @@ function openModal(m) {
 
   // Hashtags
   const hashtagsEl = document.getElementById('modalHashtags');
-  hashtagsEl.innerHTML = m.hashtags.map(h =>
+  hashtagsEl.innerHTML = getLocalizedHashtags(m).map(h =>
     `<span class="hashtag" onclick="closeModal(); searchByHashtag('${h}')">${h}</span>`
   ).join('');
 
