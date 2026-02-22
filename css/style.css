@@ -931,6 +931,56 @@ body {
 .category-결실 { background: #8D6E63; }
 .category-컬러 { background: #E91E63; }
 
+/* ========== Sibling Category Switcher ========== */
+.modal-sibling-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+}
+
+.sibling-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.modal-sibling-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sibling-btn {
+  border: none;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+  color: #fff;
+  opacity: 0.6;
+}
+
+.sibling-btn:hover:not([disabled]) {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.sibling-btn.current {
+  opacity: 1;
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 2px;
+  cursor: default;
+}
+
 /* ========== Responsive - Tablet (≤768px) ========== */
 @media (max-width: 768px) {
   /* Navbar: two-row layout (top: logo+controls, bottom: category links) */
