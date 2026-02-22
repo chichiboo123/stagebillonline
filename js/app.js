@@ -217,31 +217,31 @@ function setupLangSwitcher() {
 const DATA_URL = 'https://script.google.com/macros/s/AKfycbzBaagWGc9Is45wKcpgJN24wvtlScyDPOQRUKTAEAowqzUvMzLdLQxxg4psjeXYeGr7VQ/exec';
 
 async function loadData() {
-  // ── 1차 시도: Google Apps Script ──────────────────────────────────────
   try {
     console.log('[STAGEBILL] Apps Script 로딩 시작:', DATA_URL);
-    const res = await fetch(`${DATA_URL}?t=${Date.now()}`, { redirect: 'follow' });
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    const res = await fetch(DATA_URL, { redirect: 'follow' });
+    if (!res.ok) throw new Error(`HTTP ${res.status} — Apps Script 배포 설정 확인 필요 (액세스: 모든 사용자)`);
     const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) throw new Error('빈 배열 또는 잘못된 형식');
+    if (data && data.error) throw new Error(`Apps Script 오류: ${data.error} / 시트 목록: ${JSON.stringify(data.availableSheets)}`);
+    if (!Array.isArray(data) || data.length === 0) throw new Error('빈 배열 — 스프레드시트에 데이터가 없거나 시트명이 다릅니다');
     musicals = data;
-    console.log(`[STAGEBILL] Apps Script 로딩 성공 (${musicals.length}개)`);
+    console.log(`[STAGEBILL] 데이터 로딩 성공 (${musicals.length}개)`);
     initApp();
-    return;
   } catch (err) {
-    console.warn('[STAGEBILL] Apps Script 연결 실패 →', err.message);
-    console.warn('  → Apps Script 배포 설정을 확인하세요 (실행자: 나, 액세스: 모든 사용자)');
+    console.error('[STAGEBILL] 데이터 로딩 실패 →', err.message);
+    showDataError(err.message);
   }
+}
 
-  // ── 2차 시도: 로컬 JSON (폴백) ────────────────────────────────────────
-  try {
-    console.log('[STAGEBILL] 로컬 JSON 폴백 시도...');
-    const res = await fetch('data/musicals.json');
-    musicals = await res.json();
-    console.warn('[STAGEBILL] 로컬 JSON 폴백 사용 중 — Apps Script 연결을 확인하세요');
-    initApp();
-  } catch (fbErr) {
-    console.error('[STAGEBILL] 데이터 로딩 완전 실패:', fbErr);
+function showDataError(msg) {
+  const area = document.getElementById('contentArea');
+  if (area) {
+    area.innerHTML = `
+      <div style="text-align:center;padding:80px 20px;color:var(--text-secondary);">
+        <p style="font-size:1.1rem;margin-bottom:8px;">데이터를 불러오지 못했습니다.</p>
+        <p style="font-size:0.85rem;opacity:0.6;">${msg}</p>
+        <p style="font-size:0.8rem;margin-top:16px;opacity:0.5;">Apps Script 배포 설정 → 액세스: <b>모든 사용자</b> 로 재배포 후 새로고침하세요.</p>
+      </div>`;
   }
 }
 
