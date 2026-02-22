@@ -195,9 +195,17 @@ function refreshHeroText(m) {
   if (detailBtn) detailBtn.textContent = t('hero.detail');
   const randomBtn = document.querySelector('#heroRandomBtn span');
   if (randomBtn) randomBtn.textContent = t('hero.random');
-  // Update hero description with localized version if available
+  if (!m) return;
+  const titleEl = document.getElementById('heroTitle');
+  if (titleEl) titleEl.textContent = getLocalizedField(m, 'title');
   const descEl = document.getElementById('heroDescription');
-  if (descEl && m) descEl.textContent = getLocalizedField(m, 'description');
+  if (descEl) descEl.textContent = getLocalizedField(m, 'description');
+  const hashtagsEl = document.getElementById('heroHashtags');
+  if (hashtagsEl) {
+    hashtagsEl.innerHTML = getLocalizedHashtags(m).slice(0, 5).map(h =>
+      `<span class="hashtag" onclick="searchByHashtag('${h}')">${h}</span>`
+    ).join('');
+  }
 }
 
 // ==========================================
@@ -220,7 +228,7 @@ function setupLangSwitcher() {
 // ==========================================
 // Data Loading
 // ==========================================
-const DATA_URL = 'https://script.google.com/macros/s/AKfycbzBaagWGc9Is45wKcpgJN24wvtlScyDPOQRUKTAEAowqzUvMzLdLQxxg4psjeXYeGr7VQ/exec';
+const DATA_URL = 'https://script.google.com/macros/s/AKfycbynkJtbirN3-nFW-ZCxif-Zn0h-lpbeQJeWhCkinDYXZbcwzTktMnsOVpt4WWRk6gAocA/exec';
 
 async function loadData() {
   try {
@@ -400,15 +408,8 @@ function setRandomHero() {
 
   // Set background: image if thumbnail exists, gradient otherwise
   if (m.thumbnail) {
-    hero.style.backgroundImage = `url(${m.thumbnail})`;
-    hero.style.backgroundSize = 'cover';
-    hero.style.backgroundPosition = 'center top';
-    hero.style.background = `
-      url(${m.thumbnail}) center top / cover no-repeat,
-      linear-gradient(135deg, ${m.color}22 0%, var(--bg-primary) 100%)
-    `;
+    hero.style.background = `url("${m.thumbnail}") center top / cover no-repeat`;
   } else {
-    hero.style.backgroundImage = '';
     hero.style.background = `
       radial-gradient(ellipse at 70% 40%, ${m.color}44 0%, transparent 70%),
       linear-gradient(135deg, ${m.color}22 0%, var(--bg-primary) 100%)
@@ -416,7 +417,7 @@ function setRandomHero() {
   }
 
   document.getElementById('heroTitle').textContent = getLocalizedField(m, 'title');
-  document.getElementById('heroDescription').textContent = m.description;
+  document.getElementById('heroDescription').textContent = getLocalizedField(m, 'description');
 
   const hashtagsEl = document.getElementById('heroHashtags');
   hashtagsEl.innerHTML = getLocalizedHashtags(m).slice(0, 5).map(h =>
@@ -457,6 +458,7 @@ function resetView() {
 function renderContentRows(filter) {
   const area = document.getElementById('contentArea');
   area.innerHTML = '';
+  area.style.display = '';  // 검색 후 숨겨진 경우 복원
 
   let filtered = filter === 'all' ? musicals : musicals.filter(m => m.category === filter);
 
@@ -501,11 +503,13 @@ function getCategoryEmoji(cat) {
 function createRow(title, items) {
   const row = document.createElement('div');
   row.className = 'content-row fade-in';
+  const cardsHTML = items.map(m => {
+    try { return createCardHTML(m); }
+    catch(e) { console.error('[STAGEBILL] 카드 오류:', m.title, e); return ''; }
+  }).join('');
   row.innerHTML = `
     <h2 class="row-title">${title}</h2>
-    <div class="row-slider">
-      ${items.map(m => createCardHTML(m)).join('')}
-    </div>
+    <div class="row-slider">${cardsHTML}</div>
   `;
   attachCardEvents(row);
   return row;
