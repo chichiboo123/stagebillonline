@@ -5,6 +5,7 @@
 let musicals = [];
 let currentFilter = 'all';
 let currentHeroMusical = null;
+let currentModalMusical = null;  // tracks which musical is open in modal
 let currentLang = 'ko';
 
 // ==========================================
@@ -132,6 +133,15 @@ function getCategoryLabel(cat) {
   return (CATEGORY_MAP[cat] && CATEGORY_MAP[cat][currentLang]) || cat;
 }
 
+// Returns translated field value if available, falls back to Korean original.
+// Expects spreadsheet to supply e.g. description_en, description_ja,
+// ideaNotes_en, ideaNotes_ja fields from GOOGLETRANSLATE columns.
+function getLocalizedField(m, fieldKey) {
+  if (currentLang === 'ko') return m[fieldKey] || '';
+  const translated = m[`${fieldKey}_${currentLang}`];
+  return (translated && String(translated).trim()) ? String(translated) : (m[fieldKey] || '');
+}
+
 function applyI18n() {
   // Update all data-i18n elements
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -162,6 +172,10 @@ function applyI18n() {
     if (currentHeroMusical) {
       refreshHeroText(currentHeroMusical);
     }
+    // If a modal is currently open, re-render it in the new language
+    if (currentModalMusical && document.getElementById('modalOverlay').classList.contains('active')) {
+      openModal(currentModalMusical);
+    }
   }
 }
 
@@ -172,6 +186,9 @@ function refreshHeroText(m) {
   if (detailBtn) detailBtn.textContent = t('hero.detail');
   const randomBtn = document.querySelector('#heroRandomBtn span');
   if (randomBtn) randomBtn.textContent = t('hero.random');
+  // Update hero description with localized version if available
+  const descEl = document.getElementById('heroDescription');
+  if (descEl && m) descEl.textContent = getLocalizedField(m, 'description');
 }
 
 // ==========================================
@@ -531,6 +548,7 @@ function setupModal() {
 }
 
 function openModal(m) {
+  currentModalMusical = m;  // remember for language-switch re-render
   const overlay = document.getElementById('modalOverlay');
   const categoryClass = `category-${m.category}`;
 
@@ -570,7 +588,8 @@ function openModal(m) {
     el.textContent = t(el.getAttribute('data-i18n'));
   });
 
-  document.getElementById('modalDescription').textContent = m.description;
+  // Use translated description if available (from GOOGLETRANSLATE columns)
+  document.getElementById('modalDescription').textContent = getLocalizedField(m, 'description');
 
   // Recommended Numbers
   const numbersEl = document.getElementById('modalNumbers');
@@ -584,8 +603,8 @@ function openModal(m) {
     </div>
   `).join('');
 
-  // Idea Notes
-  document.getElementById('modalIdeaNotes').textContent = m.ideaNotes;
+  // Idea Notes (translated if available)
+  document.getElementById('modalIdeaNotes').textContent = getLocalizedField(m, 'ideaNotes');
 
   // Playlist
   const playlistEl = document.getElementById('modalPlaylist');
@@ -624,6 +643,7 @@ function openModal(m) {
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('active');
   document.body.style.overflow = '';
+  currentModalMusical = null;
 }
 
 // ==========================================
