@@ -34,6 +34,7 @@ const translations = {
     'modal.hashtags': '해시태그',
     'modal.curator': '큐레이터',
     'modal.curationYear': '큐레이션 연도',
+    'modal.siblings': '같은 작품 다른 내용',
     'search.placeholder': '작품명, 해시태그, 키워드 검색...',
     'search.results': '검색 결과',
     'search.resultCount': '건',
@@ -67,6 +68,7 @@ const translations = {
     'modal.hashtags': 'Hashtags',
     'modal.curator': 'Curator',
     'modal.curationYear': 'Curation Year',
+    'modal.siblings': 'Same Title, Different Content',
     'search.placeholder': 'Search title, hashtag, keyword...',
     'search.results': 'Search Results',
     'search.resultCount': ' result(s)',
@@ -100,6 +102,7 @@ const translations = {
     'modal.hashtags': 'ハッシュタグ',
     'modal.curator': 'キュレーター',
     'modal.curationYear': 'キュレーション年度',
+    'modal.siblings': '同じ作品、別のコンテンツ',
     'search.placeholder': 'タイトル、ハッシュタグ、キーワードで検索...',
     'search.results': '検索結果',
     'search.resultCount': '件',
@@ -211,9 +214,11 @@ function setupLangSwitcher() {
 // ==========================================
 // Data Loading
 // ==========================================
+const DATA_URL = 'https://script.google.com/macros/s/AKfycby1jFiXdvlCBobh5FKRPAME1_Wfr57FGIMigQ7aJf_8T7awztqk0jwPlx1YBlDoyV4e4A/exec';
+
 async function loadData() {
   try {
-    const response = await fetch('data/musicals.json');
+    const response = await fetch(DATA_URL);
     musicals = await response.json();
     initApp();
   } catch (err) {
@@ -545,11 +550,29 @@ function setupModal() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeModal();
   });
+
+  // Browser back button: close modal instead of leaving the page
+  window.addEventListener('popstate', () => {
+    const ov = document.getElementById('modalOverlay');
+    if (ov.classList.contains('active')) {
+      // Remove active without calling history.back() again (already popped)
+      ov.classList.remove('active');
+      document.body.style.overflow = '';
+      currentModalMusical = null;
+    }
+  });
 }
 
 function openModal(m) {
-  currentModalMusical = m;  // remember for language-switch re-render
   const overlay = document.getElementById('modalOverlay');
+  const isAlreadyOpen = overlay.classList.contains('active');
+  currentModalMusical = m;
+
+  // Push history state only on first open (not on re-renders or sibling switches)
+  if (!isAlreadyOpen) {
+    history.pushState({ modal: true }, '');
+  }
+
   const categoryClass = `category-${m.category}`;
 
   // Hero background
@@ -578,17 +601,50 @@ function openModal(m) {
 
   document.getElementById('modalCurator').textContent = `${t('modal.curator')}: ${m.curator}`;
 
-  // Show curation year (with production year as subtitle if available)
   const yearEl = document.getElementById('modalYear');
   const curationYear = m.curationYear || m.year;
   yearEl.textContent = `${t('modal.curationYear')}: ${curationYear}`;
 
-  // Apply i18n to modal section headers
+  // i18n for section headers
   document.querySelectorAll('.modal-section h3[data-i18n]').forEach(el => {
     el.textContent = t(el.getAttribute('data-i18n'));
   });
 
-  // Use translated description if available (from GOOGLETRANSLATE columns)
+  // ── Sibling versions (same title, different categories) ──────────────
+  const siblingSection = document.getElementById('modalSiblingSection');
+  const siblingLabel = document.getElementById('modalSiblingLabel');
+  const siblingList = document.getElementById('modalSiblingList');
+  const allVersions = musicals.filter(s => s.title === m.title);
+
+  if (allVersions.length > 1) {
+    siblingSection.style.display = '';
+    if (siblingLabel) siblingLabel.textContent = t('modal.siblings');
+    siblingList.innerHTML = allVersions.map(s => {
+      const isCurrent = s.id === m.id;
+      return `<button
+        class="sibling-btn category-${s.category}${isCurrent ? ' current' : ''}"
+        data-sibling-id="${s.id}"
+        ${isCurrent ? 'disabled' : ''}
+        title="${getCategoryLabel(s.category)}"
+      >${getCategoryEmoji(s.category)} ${getCategoryLabel(s.category)}</button>`;
+    }).join('');
+    // Attach click events (avoids inline onclick)
+    siblingList.querySelectorAll('.sibling-btn:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = parseInt(btn.dataset.siblingId);
+        const sibling = musicals.find(x => x.id === id);
+        if (sibling) {
+          openModal(sibling);
+          document.getElementById('modal').scrollTop = 0;
+        }
+      });
+    });
+  } else {
+    siblingSection.style.display = 'none';
+  }
+  // ─────────────────────────────────────────────────────────────────────
+
+  // Description (translated if available)
   document.getElementById('modalDescription').textContent = getLocalizedField(m, 'description');
 
   // Recommended Numbers
@@ -612,7 +668,7 @@ function openModal(m) {
   const playlistSpan = playlistEl.querySelector('span[data-i18n]');
   if (playlistSpan) playlistSpan.textContent = t('modal.playlistLink');
 
-  // References (show only if available)
+  // References
   const refsSection = document.getElementById('modalReferencesSection');
   const refsEl = document.getElementById('modalReferences');
   const refHeader = refsSection.querySelector('h3[data-i18n]');
@@ -641,9 +697,13 @@ function openModal(m) {
 }
 
 function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('active');
+  const overlay = document.getElementById('modalOverlay');
+  if (!overlay.classList.contains('active')) return;
+  overlay.classList.remove('active');
   document.body.style.overflow = '';
   currentModalMusical = null;
+  // Go back in history to remove the state we pushed on openModal
+  history.back();
 }
 
 // ==========================================
