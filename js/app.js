@@ -214,7 +214,7 @@ function setupLangSwitcher() {
 // ==========================================
 // Data Loading
 // ==========================================
-const DATA_URL = 'https://script.google.com/macros/s/AKfycby1jFiXdvlCBobh5FKRPAME1_Wfr57FGIMigQ7aJf_8T7awztqk0jwPlx1YBlDoyV4e4A/exec';
+const DATA_URL = 'https://script.google.com/macros/s/AKfycbzBaagWGc9Is45wKcpgJN24wvtlScyDPOQRUKTAEAowqzUvMzLdLQxxg4psjeXYeGr7VQ/exec';
 
 async function loadData() {
   // ── 1차 시도: Google Apps Script ──────────────────────────────────────
