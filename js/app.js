@@ -13,9 +13,14 @@ let currentLang = 'ko';
 const translations = {
   ko: {
     'nav.all': '전체',
-    'nav.daily': '일상',
-    'nav.color': '컬러',
+    'nav.science': '과학',
+    'nav.family': '가족',
     'nav.career': '진로',
+    'nav.healing': '힐링',
+    'nav.daily': '일상',
+    'nav.growth': '성장',
+    'nav.fruition': '결실',
+    'nav.color': '컬러',
     'hero.badge': 'STAGEBILL 추천',
     'hero.detail': '자세히 보기',
     'hero.random': '랜덤 추천',
@@ -34,20 +39,21 @@ const translations = {
     'search.noResults': '검색 결과가 없습니다',
     'search.noResultsSub': '다른 키워드나 해시태그로 검색해보세요.',
     'row.todayPick': '오늘의 PICK',
-    'row.recommendation': ' 추천',
     'row.browseOthers': '다른 카테고리도 둘러보세요',
     'row.works': ' 작품',
     'row.curatorPick': ' 추천',
     'footer.description': '교실에서 시작하는 뮤지컬 수업',
-    'category.daily': '일상',
-    'category.color': '컬러',
-    'category.career': '진로',
   },
   en: {
     'nav.all': 'All',
-    'nav.daily': 'Daily Life',
-    'nav.color': 'Colors',
+    'nav.science': 'Science',
+    'nav.family': 'Family',
     'nav.career': 'Career',
+    'nav.healing': 'Healing',
+    'nav.daily': 'Daily Life',
+    'nav.growth': 'Growth',
+    'nav.fruition': 'Achievement',
+    'nav.color': 'Colors',
     'hero.badge': 'STAGEBILL PICK',
     'hero.detail': 'Details',
     'hero.random': 'Shuffle',
@@ -66,20 +72,21 @@ const translations = {
     'search.noResults': 'No results found',
     'search.noResultsSub': 'Try different keywords or hashtags.',
     'row.todayPick': "Today's PICK",
-    'row.recommendation': "'s Picks",
     'row.browseOthers': 'Browse Other Categories',
     'row.works': ' Works',
     'row.curatorPick': "'s Picks",
     'footer.description': 'Musical Class Starts in the Classroom',
-    'category.daily': 'Daily Life',
-    'category.color': 'Colors',
-    'category.career': 'Career',
   },
   ja: {
     'nav.all': 'すべて',
-    'nav.daily': '日常',
-    'nav.color': 'カラー',
+    'nav.science': '科学',
+    'nav.family': '家族',
     'nav.career': '進路',
+    'nav.healing': 'ヒーリング',
+    'nav.daily': '日常',
+    'nav.growth': '成長',
+    'nav.fruition': '実り',
+    'nav.color': 'カラー',
     'hero.badge': 'STAGEBILLのおすすめ',
     'hero.detail': '詳細を見る',
     'hero.random': 'ランダム推薦',
@@ -98,14 +105,10 @@ const translations = {
     'search.noResults': '検索結果がありません',
     'search.noResultsSub': '別のキーワードで検索してください。',
     'row.todayPick': '今日のPICK',
-    'row.recommendation': 'のおすすめ',
     'row.browseOthers': '他のカテゴリも見てみよう',
     'row.works': 'の作品',
     'row.curatorPick': 'のおすすめ',
     'footer.description': '教室から始まるミュージカル授業',
-    'category.daily': '日常',
-    'category.color': 'カラー',
-    'category.career': '進路',
   }
 };
 
@@ -113,13 +116,20 @@ function t(key) {
   return (translations[currentLang] && translations[currentLang][key]) || translations['ko'][key] || key;
 }
 
+// Category label map: Korean key → { ko, en, ja }
+const CATEGORY_MAP = {
+  '과학': { ko: '과학', en: 'Science',      ja: '科学' },
+  '가족': { ko: '가족', en: 'Family',       ja: '家族' },
+  '진로': { ko: '진로', en: 'Career',       ja: '進路' },
+  '힐링': { ko: '힐링', en: 'Healing',      ja: 'ヒーリング' },
+  '일상': { ko: '일상', en: 'Daily Life',   ja: '日常' },
+  '성장': { ko: '성장', en: 'Growth',       ja: '成長' },
+  '결실': { ko: '결실', en: 'Achievement',  ja: '実り' },
+  '컬러': { ko: '컬러', en: 'Colors',       ja: 'カラー' },
+};
+
 function getCategoryLabel(cat) {
-  const map = {
-    '일상': { ko: '일상', en: 'Daily Life', ja: '日常' },
-    '컬러': { ko: '컬러', en: 'Colors', ja: 'カラー' },
-    '진로': { ko: '진로', en: 'Career', ja: '進路' }
-  };
-  return (map[cat] && map[cat][currentLang]) || cat;
+  return (CATEGORY_MAP[cat] && CATEGORY_MAP[cat][currentLang]) || cat;
 }
 
 function applyI18n() {
@@ -129,15 +139,15 @@ function applyI18n() {
     el.textContent = t(key);
   });
 
-  // Update nav links text
+  // Update nav links text — all category filters
   const navAll = document.querySelector('.nav-links a[data-filter="all"]');
-  const navDaily = document.querySelector('.nav-links a[data-filter="일상"]');
-  const navColor = document.querySelector('.nav-links a[data-filter="컬러"]');
-  const navCareer = document.querySelector('.nav-links a[data-filter="진로"]');
   if (navAll) navAll.textContent = t('nav.all');
-  if (navDaily) navDaily.textContent = t('nav.daily');
-  if (navColor) navColor.textContent = t('nav.color');
-  if (navCareer) navCareer.textContent = t('nav.career');
+  document.querySelectorAll('.nav-links a[data-filter]').forEach(link => {
+    const cat = link.dataset.filter;
+    if (cat === 'all') return;
+    const label = getCategoryLabel(cat);
+    link.textContent = label;
+  });
 
   // Update search placeholder
   const searchInput = document.getElementById('searchInput');
@@ -436,7 +446,11 @@ function renderContentRows(filter) {
 }
 
 function getCategoryEmoji(cat) {
-  const map = { '일상': '🎭', '컬러': '🎨', '진로': '🧭' };
+  const map = {
+    '과학': '🔬', '가족': '👨‍👩‍👧', '진로': '🧭',
+    '힐링': '🌿', '일상': '🎭', '성장': '🌱',
+    '결실': '🏆', '컬러': '🎨'
+  };
   return map[cat] || '🎵';
 }
 
