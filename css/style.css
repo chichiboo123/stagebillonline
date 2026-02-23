@@ -1376,12 +1376,12 @@ body {
    Upload Button & Modal
    ========================================== */
 
-/* Navbar upload button */
+/* ── 업로드 버튼 ──────────────────────────────────── */
 .upload-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 7px 14px;
   background: var(--accent);
   color: #fff;
   border: none;
@@ -1392,22 +1392,49 @@ body {
   transition: background var(--transition);
   white-space: nowrap;
   flex-shrink: 0;
+  align-self: center;
 }
 .upload-btn:hover { background: var(--accent-hover); }
-.upload-btn span { display: inline; }
 
-/* Overlay */
+/* 데스크톱: navbar 우측 끝 */
+@media (min-width: 769px) {
+  .upload-btn { margin-left: 20px; }
+}
+
+/* 모바일: 우하단 FAB */
+@media (max-width: 768px) {
+  .upload-btn {
+    position: fixed;
+    bottom: 22px;
+    right: 18px;
+    z-index: 999;
+    border-radius: 50%;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+  }
+  .upload-btn span { display: none; }
+}
+
+/* ── 업로드 오버레이 (전체화면 팝업) ──────────────── */
 .upload-overlay {
   display: none;
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0,0,0,0.78);
   z-index: 2000;
-  align-items: center;
-  justify-content: center;
   padding: 16px;
 }
-.upload-overlay.active { display: flex; }
+.upload-overlay.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* Modal card */
 .upload-modal {
@@ -1579,13 +1606,7 @@ details.upload-details { margin-top: 4px; }
 .upload-result.success { color: #4caf50; }
 .upload-result.error   { color: #ff6b6b; }
 
-/* Hide upload button label on very small screens */
-@media (max-width: 420px) {
-  .upload-btn span { display: none; }
-  .upload-btn { padding: 7px 9px; }
-}
 @media (max-width: 480px) {
   .upload-modal { padding: 28px 18px 22px; }
-  .upload-row-2,
   .upload-inline-2 { grid-template-columns: 1fr; }
 }

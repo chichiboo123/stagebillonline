@@ -197,25 +197,33 @@ function getLocalizedHashtags(m) {
   return (localized && localized.length > 0) ? localized : (m.hashtags || []);
 }
 
-// Returns localized recommended numbers array.
-// number1 supports _en/_jp translation columns; number2 is Korean-only.
-// Falls back to old recommendedNumbers array format for legacy data.
+// Returns localized recommended numbers.
+// Handles all data formats:
+//   A) New flat fields: number1_title, number1_title_en, number1_title_jp, etc.
+//   B) Old array (recommendedNumbers) + new translation columns in JSON
+//   C) Old array only → returns as-is (no translation until Apps Script updated)
 function getLocalizedNumbers(m) {
   const suffix = currentLang === 'ko' ? '' : (currentLang === 'ja' ? '_jp' : '_en');
-  const numbers = [];
-  if (m.number1_title) {
-    const title = (suffix && m[`number1_title${suffix}`]) || m.number1_title;
-    const desc  = (suffix && m[`number1_desc${suffix}`])  || m.number1_desc || '';
-    numbers.push({ title, description: desc });
+  const legacy = Array.isArray(m.recommendedNumbers) ? m.recommendedNumbers : [];
+
+  // Korean source: prefer flat field, fall back to legacy array item
+  const ko1Title = m.number1_title || (legacy[0] ? legacy[0].title       : '');
+  const ko1Desc  = m.number1_desc  || (legacy[0] ? legacy[0].description : '');
+  const ko2Title = m.number2_title || (legacy[1] ? legacy[1].title       : '');
+  const ko2Desc  = m.number2_desc  || (legacy[1] ? legacy[1].description : '');
+
+  const result = [];
+  if (ko1Title) {
+    result.push({
+      title:       (suffix && m[`number1_title${suffix}`]) || ko1Title,
+      description: (suffix && m[`number1_desc${suffix}`])  || ko1Desc,
+    });
   }
-  if (m.number2_title) {
-    numbers.push({ title: m.number2_title, description: m.number2_desc || '' });
+  if (ko2Title) {
+    result.push({ title: ko2Title, description: ko2Desc });
   }
-  // Fallback: old array format
-  if (numbers.length === 0 && Array.isArray(m.recommendedNumbers) && m.recommendedNumbers.length > 0) {
-    return m.recommendedNumbers;
-  }
-  return numbers;
+  // If still nothing found but legacy has more items, return legacy array as-is
+  return result.length > 0 ? result : legacy;
 }
 
 function applyI18n() {
