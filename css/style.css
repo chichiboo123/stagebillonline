@@ -321,6 +321,38 @@ body {
   max-width: 700px;
 }
 
+/* ── Hero 좌우 화살표 ── */
+.hero-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s ease, opacity 0.2s ease, transform 0.15s ease;
+  opacity: 0.75;
+}
+.hero-nav:hover {
+  background: rgba(0, 0, 0, 0.75);
+  opacity: 1;
+  transform: translateY(-50%) scale(1.08);
+}
+.hero-nav--prev { left: 2%; }
+.hero-nav--next { right: 2%; }
+.hero-nav.disabled {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
 .hero-badge {
   display: inline-block;
   background: var(--accent);

@@ -4,14 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>STAGEBILL - 뮤지컬 수업 자료 큐레이션</title>
-  <!-- Favicon: favicon.png 파일을 프로젝트 루트에 직접 저장하면 자동 적용 -->
-  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="icon" type="image/png" href="https://i.ibb.co/gbw2v9vf/image.png">
+  <link rel="apple-touch-icon" href="https://i.ibb.co/gbw2v9vf/image.png">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="apple-touch-icon" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260223">
+  <link rel="stylesheet" href="css/style.css?v=20260224">
 </head>
 <body>
   <!-- Navigation -->
@@ -55,6 +54,13 @@
   <!-- Hero Banner -->
   <section class="hero" id="heroBanner">
     <div class="hero-gradient"></div>
+    <!-- 좌우 네비게이션 화살표 -->
+    <button class="hero-nav hero-nav--prev" id="heroPrevBtn" aria-label="이전">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+    </button>
+    <button class="hero-nav hero-nav--next" id="heroNextBtn" aria-label="다음">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+    </button>
     <div class="hero-content">
       <span class="hero-badge" data-i18n="hero.badge">STAGEBILL 추천</span>
       <h1 class="hero-title" id="heroTitle"></h1>
