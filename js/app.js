@@ -342,6 +342,7 @@ function initApp() {
   setupSearch();
   setupLangSwitcher();
   setRandomHero();
+  setupHeroAutoRotation();
   renderContentRows('all');
   setupModal();
   setupUpload();
@@ -481,37 +482,74 @@ function hideSearchResults() {
 // ==========================================
 // Hero Banner
 // ==========================================
-function setRandomHero() {
-  const pool = musicals.filter(m => m.title && m.description);
-  if (pool.length === 0) return;
-  const m = pool[Math.floor(Math.random() * pool.length)];
-  currentHeroMusical = m;
+// withFade: true = 페이드 인/아웃 전환, false = 즉시 (첫 로드)
+function setRandomHero(withFade = false) {
+  const all  = musicals.filter(m => m.title && m.description);
+  // 직전 히어로 제외 (반복 방지)
+  const pool = all.filter(m => !currentHeroMusical || m.id !== currentHeroMusical.id);
+  const src  = pool.length > 0 ? pool : all;
+  if (src.length === 0) return;
+  const m = src[Math.floor(Math.random() * src.length)];
 
-  const hero = document.getElementById('heroBanner');
-
-  // Set background: image if thumbnail exists, gradient otherwise
-  if (m.thumbnail) {
-    hero.style.background = `url("${m.thumbnail}") center top / cover no-repeat`;
-  } else {
-    hero.style.background = `
-      radial-gradient(ellipse at 70% 40%, ${m.color}44 0%, transparent 70%),
-      linear-gradient(135deg, ${m.color}22 0%, var(--bg-primary) 100%)
-    `;
-  }
-
-  document.getElementById('heroTitle').textContent = getLocalizedField(m, 'title');
-  document.getElementById('heroDescription').textContent = getLocalizedField(m, 'description');
-
-  const hashtagsEl = document.getElementById('heroHashtags');
-  hashtagsEl.innerHTML = getLocalizedHashtags(m).slice(0, 5).map(h =>
-    `<span class="hashtag" onclick="searchByHashtag('${h}')">${h}</span>`
-  ).join('');
-
-  document.getElementById('heroDetailBtn').onclick = () => openModal(m);
-  document.getElementById('heroRandomBtn').onclick = () => {
-    setRandomHero();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const apply = () => {
+    currentHeroMusical = m;
+    const hero = document.getElementById('heroBanner');
+    if (m.thumbnail) {
+      hero.style.background = `url("${m.thumbnail}") center top / cover no-repeat`;
+    } else {
+      hero.style.background = `
+        radial-gradient(ellipse at 70% 40%, ${m.color}44 0%, transparent 70%),
+        linear-gradient(135deg, ${m.color}22 0%, var(--bg-primary) 100%)
+      `;
+    }
+    document.getElementById('heroTitle').textContent = getLocalizedField(m, 'title');
+    document.getElementById('heroDescription').textContent = getLocalizedField(m, 'description');
+    const hashtagsEl = document.getElementById('heroHashtags');
+    hashtagsEl.innerHTML = getLocalizedHashtags(m).slice(0, 5).map(h =>
+      `<span class="hashtag" onclick="searchByHashtag('${h}')">${h}</span>`
+    ).join('');
+    document.getElementById('heroDetailBtn').onclick = () => openModal(m);
   };
+
+  if (withFade) {
+    const hero = document.getElementById('heroBanner');
+    hero.style.opacity = '0';
+    setTimeout(() => { apply(); hero.style.opacity = '1'; }, 420);
+  } else {
+    apply();
+  }
+}
+
+// ─── Hero 자동 슬라이드 (Netflix 스타일) ───────────────
+let _heroTimer = null;
+const HERO_INTERVAL = 9000; // 9초마다 전환
+
+function startHeroRotation() {
+  stopHeroRotation();
+  _heroTimer = setInterval(() => {
+    const searchOn = document.getElementById('searchResults').style.display !== 'none';
+    const modalOn  = document.getElementById('modalOverlay').classList.contains('active');
+    if (!searchOn && !modalOn) setRandomHero(true);
+  }, HERO_INTERVAL);
+}
+
+function stopHeroRotation() {
+  if (_heroTimer) { clearInterval(_heroTimer); _heroTimer = null; }
+}
+
+function setupHeroAutoRotation() {
+  const hero = document.getElementById('heroBanner');
+  // 마우스 올리면 정지, 벗어나면 재개 (데스크톱)
+  hero.addEventListener('mouseenter', stopHeroRotation);
+  hero.addEventListener('mouseleave', startHeroRotation);
+  // 랜덤 추천 버튼: 수동 전환 후 타이머 리셋
+  document.getElementById('heroRandomBtn').addEventListener('click', () => {
+    setRandomHero(true);
+    stopHeroRotation();
+    setTimeout(startHeroRotation, HERO_INTERVAL);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  startHeroRotation();
 }
 
 function searchByHashtag(tag) {
@@ -531,6 +569,7 @@ function resetView() {
   document.querySelectorAll('.nav-links a').forEach(l => l.classList.remove('active'));
   document.querySelector('.nav-links a[data-filter="all"]').classList.add('active');
   setRandomHero();
+  startHeroRotation();
   renderContentRows('all');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -559,12 +598,12 @@ function renderContentRows(filter) {
       const items = musicals.filter(m => m.category === cat);
       if (items.length > 0) {
         const label = getCategoryLabel(cat);
-        area.appendChild(createRow(`${getCategoryEmoji(cat)} ${label}`, items));
+        area.appendChild(createRow(label, items));
       }
     });
   } else {
     const label = getCategoryLabel(filter);
-    area.appendChild(createRow(`${getCategoryEmoji(filter)} ${label}${t('row.works')}`, filtered));
+    area.appendChild(createRow(`${label}${t('row.works')}`, filtered));
 
     // Also show random recommendations from other categories
     const others = musicals.filter(m => m.category !== filter).sort(() => Math.random() - 0.5).slice(0, 6);
@@ -734,7 +773,7 @@ function openModal(m) {
         data-sibling-id="${s.id}"
         ${isCurrent ? 'disabled' : ''}
         title="${getCategoryLabel(s.category)}"
-      >${getCategoryEmoji(s.category)} ${getCategoryLabel(s.category)}</button>`;
+      >${getCategoryLabel(s.category)}</button>`;
     }).join('');
     // Attach click events (avoids inline onclick)
     siblingList.querySelectorAll('.sibling-btn:not([disabled])').forEach(btn => {
