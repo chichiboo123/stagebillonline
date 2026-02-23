@@ -282,6 +282,8 @@ body {
   display: flex;
   align-items: flex-end;
   overflow: hidden;
+  /* 자동 슬라이드 페이드 전환 */
+  transition: opacity 0.42s ease;
 }
 
 .hero-gradient {
