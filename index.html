@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20260223">
 </head>
 <body>
   <!-- Navigation -->
@@ -27,10 +27,6 @@
           </button>
           <input type="text" class="search-input" id="searchInput" placeholder="작품명, 해시태그, 키워드 검색...">
         </div>
-        <button class="upload-btn" id="uploadBtn" title="새 내용 업로드">
-          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-          <span>업로드</span>
-        </button>
       </div>
     </div>
     <!-- Category links row -->
@@ -45,6 +41,11 @@
       <li><a href="#" data-filter="결실">결실</a></li>
       <li><a href="#" data-filter="컬러">컬러</a></li>
     </ul>
+    <!-- 업로드 버튼: navbar 우측 끝 (데스크톱), 우하단 FAB (모바일) -->
+    <button class="upload-btn" id="uploadBtn" title="새 내용 업로드">
+      <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      <span>업로드</span>
+    </button>
   </nav>
 
   <!-- Hero Banner -->
@@ -164,124 +165,52 @@
         <p class="upload-pwd-error" id="uploadPwdError"></p>
       </div>
 
-      <!-- Step 2: 업로드 폼 -->
+      <!-- Step 2: 업로드 폼 (간소화) -->
       <div id="uploadFormStep" style="display:none;">
         <h2 class="upload-modal-title">새 내용 업로드</h2>
         <form id="uploadForm" class="upload-form" autocomplete="off">
-
-          <div class="upload-section-label">📋 기본 정보</div>
           <div class="upload-field">
             <label>작품명 <span class="req">*</span></label>
-            <input type="text" name="title" required placeholder="한국어 작품명" />
+            <input type="text" name="title" required placeholder="작품명 (필수)" />
           </div>
-          <div class="upload-field">
-            <label>카테고리 <span class="req">*</span></label>
-            <select name="category" id="uploadCategory" required>
-              <option value="">선택하세요</option>
-              <option value="과학">🔬 과학</option>
-              <option value="가족">👨‍👩‍👧 가족</option>
-              <option value="진로">🧭 진로</option>
-              <option value="힐링">🌿 힐링</option>
-              <option value="일상">🎭 일상</option>
-              <option value="성장">🌱 성장</option>
-              <option value="결실">🏆 결실</option>
-              <option value="컬러">🎨 컬러</option>
-            </select>
-          </div>
-          <div class="upload-row-2">
-            <div class="upload-field">
-              <label>큐레이터 <span class="req">*</span></label>
-              <input type="text" name="curator" required placeholder="큐레이터명 또는 기관" />
-            </div>
-            <div class="upload-field">
-              <label>작품 연도 <span class="req">*</span></label>
-              <input type="number" name="year" required placeholder="예: 2005" min="1900" max="2100" />
-            </div>
-          </div>
-          <div class="upload-row-2">
-            <div class="upload-field">
-              <label>큐레이션 연도</label>
-              <input type="number" name="curationYear" placeholder="예: 2026" value="2026" />
-            </div>
-            <div class="upload-field">
-              <label>카드 색상</label>
-              <input type="color" name="color" value="#E50914" class="upload-color" />
-            </div>
-          </div>
-
-          <div class="upload-section-label">✏️ 콘텐츠</div>
           <div class="upload-field">
             <label>작품 소개</label>
-            <textarea name="description" rows="3" placeholder="작품 소개 (2-4문장 추천)"></textarea>
+            <textarea name="description" rows="3" placeholder="작품 소개 (2~4문장 추천)"></textarea>
           </div>
           <div class="upload-field">
-            <label>수업 아이디어 노트</label>
-            <textarea name="ideaNotes" rows="3" placeholder="수업 활용 아이디어"></textarea>
-          </div>
-          <div class="upload-field">
-            <label>추천 넘버 ①  제목 / 설명</label>
+            <label>추천 넘버 ①</label>
             <div class="upload-inline-2">
               <input type="text" name="number1_title" placeholder="넘버 제목" />
               <input type="text" name="number1_desc" placeholder="한 줄 설명" />
             </div>
           </div>
           <div class="upload-field">
-            <label>추천 넘버 ②  제목 / 설명</label>
+            <label>추천 넘버 ②</label>
             <div class="upload-inline-2">
               <input type="text" name="number2_title" placeholder="넘버 제목" />
               <input type="text" name="number2_desc" placeholder="한 줄 설명" />
             </div>
           </div>
-
-          <div class="upload-section-label">🎬 미디어 &amp; 해시태그</div>
           <div class="upload-field">
-            <label>포스터 이미지 URL</label>
-            <input type="url" name="thumbnail" placeholder="https://..." />
+            <label>수업 아이디어 노트</label>
+            <textarea name="ideaNotes" rows="3" placeholder="수업 활용 아이디어"></textarea>
           </div>
           <div class="upload-field">
-            <label>YouTube 링크 (참고 영상)</label>
-            <input type="url" name="playlistLink" placeholder="https://youtube.com/watch?v=..." />
+            <label>YouTube 링크</label>
+            <input type="url" name="playlistLink" placeholder="https://youtube.com/..." />
+          </div>
+          <div class="upload-field">
+            <label>참고자료</label>
+            <input type="text" name="references" placeholder="제목::URL  (여러 개는 | 로 구분)" />
           </div>
           <div class="upload-field">
             <label>해시태그</label>
             <input type="text" name="hashtags" placeholder="#힐링, #위로, #공감  (쉼표로 구분)" />
           </div>
-
-          <!-- 번역 (접기/펼치기) -->
-          <details class="upload-details">
-            <summary class="upload-section-label">🌐 번역 (선택 — 접어서 보기)</summary>
-            <div class="upload-field">
-              <label>영문 작품명</label>
-              <input type="text" name="title_en" placeholder="Title in English" />
-            </div>
-            <div class="upload-field">
-              <label>영문 소개</label>
-              <textarea name="description_en" rows="2" placeholder="Description in English"></textarea>
-            </div>
-            <div class="upload-field">
-              <label>영문 넘버 ① 제목 / 설명</label>
-              <div class="upload-inline-2">
-                <input type="text" name="number1_title_en" placeholder="Number title" />
-                <input type="text" name="number1_desc_en" placeholder="One-line description" />
-              </div>
-            </div>
-            <div class="upload-field">
-              <label>일문 작품명</label>
-              <input type="text" name="title_ja" placeholder="日本語タイトル" />
-            </div>
-            <div class="upload-field">
-              <label>일문 소개</label>
-              <textarea name="description_ja" rows="2" placeholder="日本語の説明"></textarea>
-            </div>
-            <div class="upload-field">
-              <label>일문 넘버 ① 제목 / 설명 <small>(스프레드시트 열명: _jp)</small></label>
-              <div class="upload-inline-2">
-                <input type="text" name="number1_title_jp" placeholder="ナンバータイトル" />
-                <input type="text" name="number1_desc_jp" placeholder="一言説明" />
-              </div>
-            </div>
-          </details>
-
+          <div class="upload-field">
+            <label>포스터 이미지 URL</label>
+            <input type="url" name="thumbnail" placeholder="https://..." />
+          </div>
           <div class="upload-actions">
             <button type="submit" class="upload-submit-btn">업로드</button>
           </div>
