@@ -8,6 +8,10 @@ let currentHeroMusical = null;
 let currentModalMusical = null;  // tracks which musical is open in modal
 let currentLang = 'ko';
 
+// Hero history for prev/next arrow navigation
+let heroHistory = [];
+let heroHistoryIndex = -1;
+
 // ==========================================
 // i18n Translations
 // ==========================================
@@ -482,18 +486,12 @@ function hideSearchResults() {
 // ==========================================
 // Hero Banner
 // ==========================================
-// withFade: true = 페이드 인/아웃 전환, false = 즉시 (첫 로드)
-function setRandomHero(withFade = false) {
-  const all  = musicals.filter(m => m.title && m.description);
-  // 직전 히어로 제외 (반복 방지)
-  const pool = all.filter(m => !currentHeroMusical || m.id !== currentHeroMusical.id);
-  const src  = pool.length > 0 ? pool : all;
-  if (src.length === 0) return;
-  const m = src[Math.floor(Math.random() * src.length)];
 
-  const apply = () => {
+// 히어로 콘텐츠 즉시 적용 (fade 여부 선택)
+function applyHero(m, withFade) {
+  const hero = document.getElementById('heroBanner');
+  const doApply = () => {
     currentHeroMusical = m;
-    const hero = document.getElementById('heroBanner');
     if (m.thumbnail) {
       hero.style.background = `url("${m.thumbnail}") center top / cover no-repeat`;
     } else {
@@ -509,47 +507,94 @@ function setRandomHero(withFade = false) {
       `<span class="hashtag" onclick="searchByHashtag('${h}')">${h}</span>`
     ).join('');
     document.getElementById('heroDetailBtn').onclick = () => openModal(m);
+    updateHeroNavArrows();
   };
 
   if (withFade) {
-    const hero = document.getElementById('heroBanner');
     hero.style.opacity = '0';
-    setTimeout(() => { apply(); hero.style.opacity = '1'; }, 420);
+    setTimeout(() => { doApply(); hero.style.opacity = '1'; }, 420);
   } else {
-    apply();
+    doApply();
+  }
+}
+
+// 이전/다음 화살표 활성화 상태 업데이트
+function updateHeroNavArrows() {
+  const prevBtn = document.getElementById('heroPrevBtn');
+  const nextBtn = document.getElementById('heroNextBtn');
+  if (!prevBtn || !nextBtn) return;
+  const canPrev = heroHistoryIndex > 0;
+  prevBtn.classList.toggle('disabled', !canPrev);
+  nextBtn.classList.remove('disabled');
+}
+
+// 랜덤 히어로 선택 + 히스토리에 추가
+function setRandomHero(withFade = false) {
+  const all  = musicals.filter(m => m.title && m.description);
+  const pool = all.filter(m => !currentHeroMusical || m.id !== currentHeroMusical.id);
+  const src  = pool.length > 0 ? pool : all;
+  if (src.length === 0) return;
+  const m = src[Math.floor(Math.random() * src.length)];
+  // 현재 위치 이후의 히스토리 삭제 후 새 항목 추가
+  heroHistory = heroHistory.slice(0, heroHistoryIndex + 1);
+  heroHistory.push(m);
+  heroHistoryIndex = heroHistory.length - 1;
+  applyHero(m, withFade);
+}
+
+// 화살표로 히어로 이동 (-1: 이전, +1: 다음)
+function navigateHero(direction) {
+  scheduleHeroRotation(); // 타이머 리셋
+  if (direction === -1 && heroHistoryIndex > 0) {
+    heroHistoryIndex--;
+    applyHero(heroHistory[heroHistoryIndex], true);
+  } else if (direction === 1) {
+    if (heroHistoryIndex < heroHistory.length - 1) {
+      // 히스토리에 다음 항목이 있으면 그대로 이동
+      heroHistoryIndex++;
+      applyHero(heroHistory[heroHistoryIndex], true);
+    } else {
+      // 히스토리 끝이면 새 랜덤 선택
+      setRandomHero(true);
+    }
   }
 }
 
 // ─── Hero 자동 슬라이드 (Netflix 스타일) ───────────────
 let _heroTimer = null;
-const HERO_INTERVAL = 9000; // 9초마다 전환
+let _heroHovered = false;
+const HERO_INTERVAL = 5000; // 5초마다 전환
 
-function startHeroRotation() {
-  stopHeroRotation();
-  _heroTimer = setInterval(() => {
+// setInterval 대신 재귀 setTimeout으로 구현
+// → opacity 전환 중 spurious mouseleave 이벤트가 타이머를 멈추는 버그 방지
+function scheduleHeroRotation() {
+  clearTimeout(_heroTimer);
+  _heroTimer = setTimeout(function tick() {
     const searchOn = document.getElementById('searchResults').style.display !== 'none';
     const modalOn  = document.getElementById('modalOverlay').classList.contains('active');
-    if (!searchOn && !modalOn) setRandomHero(true);
+    if (!_heroHovered && !searchOn && !modalOn) setRandomHero(true);
+    _heroTimer = setTimeout(tick, HERO_INTERVAL);
   }, HERO_INTERVAL);
 }
 
-function stopHeroRotation() {
-  if (_heroTimer) { clearInterval(_heroTimer); _heroTimer = null; }
-}
+function startHeroRotation() { scheduleHeroRotation(); }
+function stopHeroRotation()  { clearTimeout(_heroTimer); _heroTimer = null; }
 
 function setupHeroAutoRotation() {
   const hero = document.getElementById('heroBanner');
-  // 마우스 올리면 정지, 벗어나면 재개 (데스크톱)
-  hero.addEventListener('mouseenter', stopHeroRotation);
-  hero.addEventListener('mouseleave', startHeroRotation);
-  // 랜덤 추천 버튼: 수동 전환 후 타이머 리셋
+  // 플래그만 업데이트 — 타이머는 항상 유지
+  hero.addEventListener('mouseenter', () => { _heroHovered = true; });
+  hero.addEventListener('mouseleave', () => { _heroHovered = false; });
+  // 랜덤 추천 버튼
   document.getElementById('heroRandomBtn').addEventListener('click', () => {
     setRandomHero(true);
-    stopHeroRotation();
-    setTimeout(startHeroRotation, HERO_INTERVAL);
+    scheduleHeroRotation();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
-  startHeroRotation();
+  // 좌우 화살표
+  document.getElementById('heroPrevBtn').addEventListener('click', () => navigateHero(-1));
+  document.getElementById('heroNextBtn').addEventListener('click', () => navigateHero(1));
+  scheduleHeroRotation();
 }
 
 function searchByHashtag(tag) {
@@ -568,8 +613,10 @@ function resetView() {
   currentFilter = 'all';
   document.querySelectorAll('.nav-links a').forEach(l => l.classList.remove('active'));
   document.querySelector('.nav-links a[data-filter="all"]').classList.add('active');
+  heroHistory = [];
+  heroHistoryIndex = -1;
   setRandomHero();
-  startHeroRotation();
+  scheduleHeroRotation();
   renderContentRows('all');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
