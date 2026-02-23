@@ -563,7 +563,7 @@ function navigateHero(direction) {
 // ─── Hero 자동 슬라이드 (Netflix 스타일) ───────────────
 let _heroTimer = null;
 let _heroHovered = false;
-const HERO_INTERVAL = 5000; // 5초마다 전환
+const HERO_INTERVAL = 7000; // 7초마다 전환
 
 // setInterval 대신 재귀 setTimeout으로 구현
 // → opacity 전환 중 spurious mouseleave 이벤트가 타이머를 멈추는 버그 방지
@@ -591,9 +591,21 @@ function setupHeroAutoRotation() {
     scheduleHeroRotation();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
-  // 좌우 화살표
-  document.getElementById('heroPrevBtn').addEventListener('click', () => navigateHero(-1));
-  document.getElementById('heroNextBtn').addEventListener('click', () => navigateHero(1));
+  // 터치 스와이프로 좌우 이동 (모바일)
+  let _swipeStartX = 0;
+  let _swipeStartY = 0;
+  hero.addEventListener('touchstart', e => {
+    _swipeStartX = e.touches[0].clientX;
+    _swipeStartY = e.touches[0].clientY;
+  }, { passive: true });
+  hero.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - _swipeStartX;
+    const dy = e.changedTouches[0].clientY - _swipeStartY;
+    // 수평 이동이 50px 이상이고 수직보다 클 때만 반응
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      navigateHero(dx < 0 ? 1 : -1); // 왼쪽 스와이프 → 다음, 오른쪽 → 이전
+    }
+  }, { passive: true });
   scheduleHeroRotation();
 }
 
