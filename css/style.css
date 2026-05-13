@@ -476,6 +476,10 @@ body {
   color: var(--text-primary);
 }
 
+.row-slider-wrap {
+  position: relative;
+}
+
 .row-slider {
   display: flex;
   gap: 8px;
@@ -487,6 +491,55 @@ body {
 
 .row-slider::-webkit-scrollbar {
   display: none;
+}
+
+/* ── Row nav arrows (desktop) ── */
+.row-nav-btn {
+  position: absolute;
+  top: 0;
+  bottom: 10px; /* matches row-slider padding-bottom */
+  width: 72px;
+  border: none;
+  cursor: pointer;
+  z-index: 5;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.row-nav-btn svg {
+  background: rgba(30, 30, 30, 0.75);
+  border-radius: 50%;
+  padding: 8px;
+  width: 44px;
+  height: 44px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  transition: background 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+.row-nav-btn:hover svg {
+  background: rgba(229, 9, 20, 0.85);
+  transform: scale(1.12);
+}
+.row-nav-prev {
+  left: 0;
+  background: linear-gradient(to right, rgba(20,20,20,0.92) 25%, transparent);
+}
+.row-nav-next {
+  right: 0;
+  background: linear-gradient(to left,  rgba(20,20,20,0.92) 25%, transparent);
+}
+/* Show on row hover, hide when at boundary */
+.content-row:hover .row-nav-btn:not(.row-nav-hidden) {
+  opacity: 1;
+  pointer-events: auto;
+}
+.row-nav-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* ========== Cards ========== */
@@ -1107,6 +1160,9 @@ body {
   }
   .hero-prev { left: 10px; }
   .hero-next { right: 10px; }
+
+  /* Row nav arrows: hidden on mobile (touch swipe handles it) */
+  .row-nav-btn { display: none; }
 
   .hero-content {
     padding: 0 4% 10%;

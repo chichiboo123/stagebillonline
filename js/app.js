@@ -735,10 +735,49 @@ function createRow(title, items) {
   }).join('');
   row.innerHTML = `
     <h2 class="row-title">${title}</h2>
-    <div class="row-slider">${cardsHTML}</div>
+    <div class="row-slider-wrap">
+      <button class="row-nav-btn row-nav-prev row-nav-hidden" aria-label="이전">
+        <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      </button>
+      <div class="row-slider">${cardsHTML}</div>
+      <button class="row-nav-btn row-nav-next" aria-label="다음">
+        <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+      </button>
+    </div>
   `;
   attachCardEvents(row);
+  setupRowNav(row);
   return row;
+}
+
+function setupRowNav(row) {
+  const slider  = row.querySelector('.row-slider');
+  const prevBtn = row.querySelector('.row-nav-prev');
+  const nextBtn = row.querySelector('.row-nav-next');
+  if (!slider || !prevBtn || !nextBtn) return;
+
+  const update = () => {
+    const atStart = slider.scrollLeft <= 2;
+    const atEnd   = slider.scrollLeft >= slider.scrollWidth - slider.clientWidth - 2;
+    prevBtn.classList.toggle('row-nav-hidden', atStart);
+    nextBtn.classList.toggle('row-nav-hidden', atEnd);
+  };
+
+  prevBtn.addEventListener('click', () => {
+    slider.scrollBy({ left: -(slider.clientWidth * 0.85), behavior: 'smooth' });
+  });
+  nextBtn.addEventListener('click', () => {
+    slider.scrollBy({ left: slider.clientWidth * 0.85, behavior: 'smooth' });
+  });
+
+  slider.addEventListener('scroll', update, { passive: true });
+
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(update).observe(slider);
+  } else {
+    setTimeout(update, 300);
+  }
+  update();
 }
 
 // ==========================================
