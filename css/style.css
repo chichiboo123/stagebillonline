@@ -321,6 +321,38 @@ body {
   max-width: 700px;
 }
 
+/* ── Hero navigation arrows ── */
+.hero-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.2s, opacity 0.2s, transform 0.2s;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.hero-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+  transform: translateY(-50%) scale(1.08);
+}
+.hero-nav-btn.disabled {
+  opacity: 0.2;
+  cursor: default;
+  pointer-events: none;
+}
+.hero-prev { left: 20px; }
+.hero-next { right: 20px; }
+
 
 .hero-badge {
   display: inline-block;
@@ -1068,6 +1100,13 @@ body {
     padding-top: 104px; /* 56px top row + ~48px nav-links row */
     align-items: flex-end;
   }
+
+  .hero-nav-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .hero-prev { left: 10px; }
+  .hero-next { right: 10px; }
 
   .hero-content {
     padding: 0 4% 10%;

@@ -32,17 +32,9 @@
         </div>
       </div>
     </div>
-    <!-- Category links row -->
+    <!-- Category links row (additional items are built dynamically from data) -->
     <ul class="nav-links" id="navLinks">
       <li><a href="#" class="active" data-filter="all">전체</a></li>
-      <li><a href="#" data-filter="과학">과학</a></li>
-      <li><a href="#" data-filter="가족">가족</a></li>
-      <li><a href="#" data-filter="진로">진로</a></li>
-      <li><a href="#" data-filter="힐링">힐링</a></li>
-      <li><a href="#" data-filter="일상">일상</a></li>
-      <li><a href="#" data-filter="성장">성장</a></li>
-      <li><a href="#" data-filter="결실">결실</a></li>
-      <li><a href="#" data-filter="컬러">컬러</a></li>
     </ul>
     <!-- 업로드 버튼: navbar 우측 끝 (데스크톱), 우하단 FAB (모바일) -->
     <button class="upload-btn" id="uploadBtn" title="새 내용 업로드">
@@ -54,6 +46,12 @@
   <!-- Hero Banner -->
   <section class="hero" id="heroBanner">
     <div class="hero-gradient"></div>
+    <button class="hero-nav-btn hero-prev disabled" id="heroPrevBtn" aria-label="이전">
+      <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+    </button>
+    <button class="hero-nav-btn hero-next" id="heroNextBtn" aria-label="다음">
+      <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+    </button>
     <div class="hero-content">
       <span class="hero-badge" data-i18n="hero.badge">STAGEBILL 추천</span>
       <h1 class="hero-title" id="heroTitle"></h1>

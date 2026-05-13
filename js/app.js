@@ -140,6 +140,45 @@ function getCategoryLabel(cat) {
   return (CATEGORY_MAP[cat] && CATEGORY_MAP[cat][currentLang]) || cat;
 }
 
+// Category color map + fallback palette for dynamically added categories
+const CATEGORY_COLORS = {
+  '과학': '#00ACC1', '가족': '#FF7043', '진로': '#43A047',
+  '힐링': '#7E57C2', '일상': '#1E88E5', '성장': '#F4511E',
+  '결실': '#8D6E63', '컬러': '#E91E63',
+};
+const _CAT_PALETTE = [
+  '#26A69A', '#AB47BC', '#EC407A', '#FFA726',
+  '#66BB6A', '#42A5F5', '#EF5350', '#78909C',
+  '#D4E157', '#FF8A65', '#4DB6AC', '#BA68C8',
+];
+const _dynamicCatColors = {};
+
+function getCategoryColor(cat) {
+  if (CATEGORY_COLORS[cat]) return CATEGORY_COLORS[cat];
+  if (_dynamicCatColors[cat]) return _dynamicCatColors[cat];
+  const idx = Object.keys(_dynamicCatColors).length % _CAT_PALETTE.length;
+  _dynamicCatColors[cat] = _CAT_PALETTE[idx];
+  return _dynamicCatColors[cat];
+}
+
+// Build nav links dynamically from loaded data
+function buildNavLinks() {
+  const navLinks = document.getElementById('navLinks');
+  // Remove existing category links, keep only "전체"
+  navLinks.querySelectorAll('li:not(:first-child)').forEach(li => li.remove());
+  // Unique categories in order of first appearance
+  const categories = [...new Set(musicals.map(m => m.category).filter(Boolean))];
+  categories.forEach(cat => {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = '#';
+    a.dataset.filter = cat;
+    a.textContent = getCategoryLabel(cat);
+    li.appendChild(a);
+    navLinks.appendChild(li);
+  });
+}
+
 // Extracts YouTube video ID from a single-video URL.
 // Returns null for playlists (youtube.com/playlist?list=...) or non-YouTube URLs.
 function getYouTubeVideoId(url) {
@@ -342,6 +381,7 @@ function showDataError(msg) {
 // App Initialization
 // ==========================================
 function initApp() {
+  buildNavLinks();
   setupNavbar();
   setupSearch();
   setupLangSwitcher();
@@ -591,6 +631,11 @@ function setupHeroAutoRotation() {
     scheduleHeroRotation();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
+  // 이전/다음 화살표 버튼
+  const prevBtn = document.getElementById('heroPrevBtn');
+  const nextBtn = document.getElementById('heroNextBtn');
+  if (prevBtn) prevBtn.addEventListener('click', () => { navigateHero(-1); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  if (nextBtn) nextBtn.addEventListener('click', () => { navigateHero(1);  window.scrollTo({ top: 0, behavior: 'smooth' }); });
   // 터치 스와이프로 좌우 이동 (모바일)
   let _swipeStartX = 0;
   let _swipeStartY = 0;
@@ -700,7 +745,6 @@ function createRow(title, items) {
 // Card Component
 // ==========================================
 function createCardHTML(m) {
-  const categoryClass = `category-${m.category}`;
   const hashtags = getLocalizedHashtags(m).slice(0, 3).map(h =>
     `<span class="hashtag-sm" onclick="event.stopPropagation(); searchByHashtag('${h}')">${h}</span>`
   ).join('');
@@ -714,6 +758,7 @@ function createCardHTML(m) {
     : `style="background: linear-gradient(135deg, ${m.color}cc, ${m.color}44);"`;
 
   const catLabel = getCategoryLabel(m.category);
+  const catColor = getCategoryColor(m.category);
 
   return `
     <div class="card" data-id="${m.id}">
@@ -723,7 +768,7 @@ function createCardHTML(m) {
       <div class="card-info">
         <div class="card-info-title">${getLocalizedField(m, 'title')}</div>
         <div class="card-info-meta">
-          <span class="card-category-badge ${categoryClass}">${catLabel}</span>
+          <span class="card-category-badge" style="background:${catColor}">${catLabel}</span>
           <span>${m.curationYear}</span>
         </div>
         <div class="card-hashtags">${hashtags}</div>
@@ -780,8 +825,6 @@ function openModal(m) {
     history.pushState({ modal: true }, '');
   }
 
-  const categoryClass = `category-${m.category}`;
-
   // Hero background
   const modalHero = document.getElementById('modalHero');
   if (m.thumbnail) {
@@ -804,7 +847,8 @@ function openModal(m) {
 
   const catEl = document.getElementById('modalCategory');
   catEl.textContent = getCategoryLabel(m.category);
-  catEl.className = `modal-category ${categoryClass}`;
+  catEl.className = 'modal-category';
+  catEl.style.background = getCategoryColor(m.category);
 
   document.getElementById('modalCurator').textContent = `${t('modal.curator')}: ${m.curator}`;
 
@@ -828,7 +872,8 @@ function openModal(m) {
     siblingList.innerHTML = allVersions.map(s => {
       const isCurrent = s.id === m.id;
       return `<button
-        class="sibling-btn category-${s.category}${isCurrent ? ' current' : ''}"
+        class="sibling-btn${isCurrent ? ' current' : ''}"
+        style="background:${getCategoryColor(s.category)}"
         data-sibling-id="${s.id}"
         ${isCurrent ? 'disabled' : ''}
         title="${getCategoryLabel(s.category)}"
