@@ -13,8 +13,10 @@ function getSheet() {
   return SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
 }
 
-// 모든 요청은 doGet 으로 처리합니다.
-// (Apps Script는 GET 요청에만 기본 CORS 헤더를 추가합니다.)
+// 읽기는 doGet, 업로드는 doPost로 처리합니다.
+// (GET은 URL 길이 한계가 있어 긴 본문이 잘리므로 업로드는 POST 권장)
+// 이전 버전 호환을 위해 doGet에서도 action=upload를 받아주지만,
+// 클라이언트는 POST를 사용하세요.
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || 'read';
 
@@ -23,6 +25,12 @@ function doGet(e) {
   }
 
   return handleRead();
+}
+
+function doPost(e) {
+  // form-urlencoded POST는 e.parameter 로 들어옵니다.
+  const params = (e && e.parameter) || {};
+  return handleUpload(params);
 }
 
 // ── 데이터 읽기 ──────────────────────────────────────────────
@@ -49,25 +57,53 @@ function handleRead() {
 }
 
 // ── 업로드(행 추가) ──────────────────────────────────────────
+// 메타 파라미터(저장하지 않는 키)
+const META_KEYS = { action: 1, password: 1 };
+
 function handleUpload(params) {
   try {
     if (params.password !== UPLOAD_PASSWORD) {
       return jsonResponse({ error: '비밀번호가 올바르지 않습니다.' });
     }
 
-    const sheet   = getSheet();
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const sheet     = getSheet();
+    const lastCol   = Math.max(sheet.getLastColumn(), 1);
+    let headers     = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 
-    // id 자동 생성 (기존 최대 id + 1, 없으면 1)
-    let nextId = 1;
-    if (headers[0] === 'id') {
+    // 시트가 비어있으면 (헤더 없음) 입력 키로 헤더를 생성
+    if (headers.every(h => !h)) {
+      const seedHeaders = Object.keys(params).filter(k => !META_KEYS[k]);
+      if (seedHeaders.length === 0) {
+        return jsonResponse({ error: '빈 시트에 보낼 데이터가 없습니다.' });
+      }
+      sheet.getRange(1, 1, 1, seedHeaders.length).setValues([seedHeaders]);
+      headers = seedHeaders;
+    }
+
+    // 누락된 컬럼을 자동으로 추가 (조용한 데이터 손실 방지)
+    const headerSet = new Set(headers.filter(Boolean));
+    const missing   = Object.keys(params)
+      .filter(k => !META_KEYS[k] && !headerSet.has(k));
+    if (missing.length > 0) {
+      const startCol = headers.length + 1;
+      sheet.getRange(1, startCol, 1, missing.length).setValues([missing]);
+      headers = headers.concat(missing);
+      Logger.log('Headers extended: %s', missing.join(', '));
+    }
+
+    // id 컬럼을 어디에 있든 찾아서 자동 생성
+    const idCol = headers.indexOf('id'); // 0-based; -1이면 없음
+    let nextId = '';
+    if (idCol !== -1) {
+      let maxId = 0;
       const lastRow = sheet.getLastRow();
       if (lastRow >= 2) {
-        const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues()
+        const ids = sheet.getRange(2, idCol + 1, lastRow - 1, 1).getValues()
           .map(r => Number(r[0]))
           .filter(n => !isNaN(n));
-        if (ids.length) nextId = Math.max.apply(null, ids) + 1;
+        if (ids.length) maxId = Math.max.apply(null, ids);
       }
+      nextId = maxId + 1;
       params.id = String(nextId);
     }
 
