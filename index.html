@@ -171,59 +171,59 @@
         <h2 class="upload-modal-title">새 내용 업로드</h2>
         <form id="uploadForm" class="upload-form" autocomplete="off">
           <div class="upload-field">
-            <label>작품명 <span class="req">*</span></label>
-            <input type="text" name="title" placeholder="작품명" />
+            <label for="upTitle">작품명 <span class="req">*</span></label>
+            <input id="upTitle" type="text" name="title" placeholder="작품명" />
           </div>
           <div class="upload-field">
-            <label>카테고리 <span class="req">*</span></label>
+            <label for="categoryInput">카테고리 <span class="req">*</span></label>
             <input type="text" name="category" id="categoryInput" list="categoryList" placeholder="카테고리 선택 또는 직접 입력" autocomplete="off" />
             <datalist id="categoryList"></datalist>
           </div>
           <div class="upload-field">
-            <label>큐레이터 <span class="req">*</span></label>
-            <input type="text" name="curator" placeholder="큐레이터 이름" />
+            <label for="upCurator">큐레이터 <span class="req">*</span></label>
+            <input id="upCurator" type="text" name="curator" placeholder="큐레이터 이름" />
           </div>
           <div class="upload-field">
-            <label>작품 연도 <span class="req">*</span></label>
-            <input type="number" name="curationYear" placeholder="예: 2025" min="2000" max="2099" />
+            <label for="upYear">작품 연도 <span class="req">*</span></label>
+            <input id="upYear" type="number" name="curationYear" placeholder="예: 2025" min="2000" max="2099" />
           </div>
           <div class="upload-field">
-            <label>작품 소개 <span class="req">*</span></label>
-            <textarea name="description" rows="3" placeholder="작품 소개 (2~4문장 추천)"></textarea>
+            <label for="upDesc">작품 소개 <span class="req">*</span></label>
+            <textarea id="upDesc" name="description" rows="3" placeholder="작품 소개 (2~4문장 추천)"></textarea>
           </div>
           <div class="upload-field">
-            <label>추천 넘버 ① <span class="req">*</span></label>
+            <label for="upN1Title">추천 넘버 ① <span class="req">*</span></label>
             <div class="upload-inline-2">
-              <input type="text" name="number1_title" placeholder="넘버 제목" />
-              <input type="text" name="number1_desc" placeholder="한 줄 설명" />
+              <input id="upN1Title" type="text" name="number1_title" placeholder="넘버 제목" />
+              <input id="upN1Desc" type="text" name="number1_desc" aria-label="추천 넘버 ① 설명" placeholder="한 줄 설명" />
             </div>
           </div>
           <div class="upload-field">
-            <label>추천 넘버 ② <span class="opt">(선택)</span></label>
+            <label for="upN2Title">추천 넘버 ② <span class="opt">(선택)</span></label>
             <div class="upload-inline-2">
-              <input type="text" name="number2_title" placeholder="넘버 제목" />
-              <input type="text" name="number2_desc" placeholder="한 줄 설명" />
+              <input id="upN2Title" type="text" name="number2_title" placeholder="넘버 제목" />
+              <input id="upN2Desc" type="text" name="number2_desc" aria-label="추천 넘버 ② 설명" placeholder="한 줄 설명" />
             </div>
           </div>
           <div class="upload-field">
-            <label>수업 아이디어 노트 <span class="req">*</span></label>
-            <textarea name="ideaNotes" rows="3" placeholder="수업 활용 아이디어"></textarea>
+            <label for="upIdeas">수업 아이디어 노트 <span class="req">*</span></label>
+            <textarea id="upIdeas" name="ideaNotes" rows="3" placeholder="수업 활용 아이디어"></textarea>
           </div>
           <div class="upload-field">
-            <label>YouTube 링크 <span class="req">*</span></label>
-            <input type="url" name="playlistLink" placeholder="https://youtube.com/..." />
+            <label for="upPlaylist">YouTube 링크 <span class="req">*</span></label>
+            <input id="upPlaylist" type="url" name="playlistLink" placeholder="https://youtube.com/..." />
           </div>
           <div class="upload-field">
-            <label>참고자료 <span class="opt">(선택)</span></label>
-            <input type="text" name="references" placeholder="제목::URL  (여러 개는 | 로 구분)" />
+            <label for="upRefs">참고자료 <span class="opt">(선택)</span></label>
+            <input id="upRefs" type="text" name="references" placeholder="제목::URL  (여러 개는 | 로 구분)" />
           </div>
           <div class="upload-field">
-            <label>해시태그 <span class="req">*</span></label>
-            <input type="text" name="hashtags" placeholder="#힐링, #위로, #공감  (쉼표로 구분)" />
+            <label for="upHashtags">해시태그 <span class="req">*</span></label>
+            <input id="upHashtags" type="text" name="hashtags" placeholder="#힐링, #위로, #공감  (쉼표로 구분)" />
           </div>
           <div class="upload-field">
-            <label>포스터 이미지 URL <span class="req">*</span></label>
-            <input type="url" name="thumbnail" placeholder="https://..." />
+            <label for="upThumb">포스터 이미지 URL <span class="req">*</span></label>
+            <input id="upThumb" type="url" name="thumbnail" placeholder="https://..." />
           </div>
           <div class="upload-actions">
             <button type="submit" class="upload-submit-btn">업로드</button>
@@ -234,6 +234,6 @@
     </div>
   </div>
 
-  <script src="js/app.js?v=20260222d"></script>
+  <script src="js/app.js?v=20260517a"></script>
 </body>
 </html>
