@@ -172,44 +172,66 @@
         <form id="uploadForm" class="upload-form" autocomplete="off">
           <div class="upload-field">
             <label>작품명 <span class="req">*</span></label>
-            <input type="text" name="title" required placeholder="작품명 (필수)" />
+            <input type="text" name="title" placeholder="작품명" />
           </div>
           <div class="upload-field">
-            <label>작품 소개</label>
+            <label>카테고리 <span class="req">*</span></label>
+            <select name="category">
+              <option value="">카테고리 선택</option>
+              <option value="과학">과학</option>
+              <option value="가족">가족</option>
+              <option value="진로">진로</option>
+              <option value="힐링">힐링</option>
+              <option value="일상">일상</option>
+              <option value="성장">성장</option>
+              <option value="결실">결실</option>
+              <option value="컬러">컬러</option>
+            </select>
+          </div>
+          <div class="upload-field">
+            <label>큐레이터 <span class="req">*</span></label>
+            <input type="text" name="curator" placeholder="큐레이터 이름" />
+          </div>
+          <div class="upload-field">
+            <label>작품 연도 <span class="req">*</span></label>
+            <input type="number" name="curationYear" placeholder="예: 2025" min="2000" max="2099" />
+          </div>
+          <div class="upload-field">
+            <label>작품 소개 <span class="req">*</span></label>
             <textarea name="description" rows="3" placeholder="작품 소개 (2~4문장 추천)"></textarea>
           </div>
           <div class="upload-field">
-            <label>추천 넘버 ①</label>
+            <label>추천 넘버 ① <span class="req">*</span></label>
             <div class="upload-inline-2">
               <input type="text" name="number1_title" placeholder="넘버 제목" />
               <input type="text" name="number1_desc" placeholder="한 줄 설명" />
             </div>
           </div>
           <div class="upload-field">
-            <label>추천 넘버 ②</label>
+            <label>추천 넘버 ② <span class="opt">(선택)</span></label>
             <div class="upload-inline-2">
               <input type="text" name="number2_title" placeholder="넘버 제목" />
               <input type="text" name="number2_desc" placeholder="한 줄 설명" />
             </div>
           </div>
           <div class="upload-field">
-            <label>수업 아이디어 노트</label>
+            <label>수업 아이디어 노트 <span class="req">*</span></label>
             <textarea name="ideaNotes" rows="3" placeholder="수업 활용 아이디어"></textarea>
           </div>
           <div class="upload-field">
-            <label>YouTube 링크</label>
+            <label>YouTube 링크 <span class="req">*</span></label>
             <input type="url" name="playlistLink" placeholder="https://youtube.com/..." />
           </div>
           <div class="upload-field">
-            <label>참고자료</label>
+            <label>참고자료 <span class="req">*</span></label>
             <input type="text" name="references" placeholder="제목::URL  (여러 개는 | 로 구분)" />
           </div>
           <div class="upload-field">
-            <label>해시태그</label>
+            <label>해시태그 <span class="req">*</span></label>
             <input type="text" name="hashtags" placeholder="#힐링, #위로, #공감  (쉼표로 구분)" />
           </div>
           <div class="upload-field">
-            <label>포스터 이미지 URL</label>
+            <label>포스터 이미지 URL <span class="req">*</span></label>
             <input type="url" name="thumbnail" placeholder="https://..." />
           </div>
           <div class="upload-actions">

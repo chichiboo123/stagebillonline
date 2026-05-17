@@ -1638,6 +1638,7 @@ details.upload-details { margin-top: 4px; }
 }
 .upload-field small { font-size: 0.72rem; opacity: 0.7; }
 .req { color: var(--accent); }
+.opt { color: #888; font-size: 0.78rem; font-weight: normal; }
 
 .upload-field input[type="text"],
 .upload-field input[type="url"],
