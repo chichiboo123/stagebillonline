@@ -1194,9 +1194,11 @@ async function handleUploadSubmit(e) {
         if (verifyRes.ok) {
           const fresh = await verifyRes.json();
           if (Array.isArray(fresh)) {
+            const wantTitle = String(data.title).trim();
+            const wantCurator = String(data.curator).trim();
             verified = fresh.some(m =>
-              (m.title || '').trim() === data.title &&
-              (m.curator || '').trim() === data.curator
+              String(m.title ?? '').trim() === wantTitle &&
+              String(m.curator ?? '').trim() === wantCurator
             );
             if (verified) musicals = fresh;
           }
