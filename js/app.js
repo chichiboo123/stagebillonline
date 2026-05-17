@@ -1091,9 +1091,12 @@ function submitViaIframe(url, data) {
     iframe.setAttribute('aria-hidden', 'true');
 
     const form = document.createElement('form');
-    form.method = 'GET';
+    // POST로 보내야 긴 본문(설명·아이디어 노트·썸네일 URL 등)이 URL 길이
+    // 제한(~8KB)에 잘리지 않습니다. Apps Script doPost가 받습니다.
+    form.method = 'POST';
     form.action = url;
     form.target = name;
+    form.enctype = 'application/x-www-form-urlencoded';
     form.acceptCharset = 'UTF-8';
     form.style.display = 'none';
 
@@ -1164,9 +1167,15 @@ async function handleUploadSubmit(e) {
     return;
   }
 
-  // Normalize hashtags to comma-joined string for the sheet
+  // Normalize hashtags: strip whitespace, ensure '#' prefix, comma-join
+  // (시트에는 "#힐링,#위로" 형식으로 저장 → handleRead가 배열로 다시 분리)
   if (data.hashtags) {
-    data.hashtags = data.hashtags.split(/[,，]/).map(h => h.trim()).filter(Boolean).join(',');
+    data.hashtags = data.hashtags
+      .split(/[,，]/)
+      .map(h => h.trim().replace(/^#+/, ''))
+      .filter(Boolean)
+      .map(h => `#${h}`)
+      .join(',');
   }
 
   submitBtn.disabled = true;
@@ -1175,18 +1184,21 @@ async function handleUploadSubmit(e) {
   resultEl.className = 'upload-result';
 
   try {
-    // fetch (even with mode:'no-cors') is blocked by CORB for cross-origin JSON
-    // responses from Apps Script's redirect host. Submit via a hidden iframe form
-    // instead — the browser treats it as a navigation, so CORS/CORB don't apply,
-    // and Apps Script's doGet processes the request normally.
+    // fetch는 Apps Script 리다이렉트 호스트의 cross-origin JSON 응답에 대해
+    // CORB로 차단됩니다. 숨겨진 iframe form POST로 보내면 브라우저는 이를
+    // 일반 네비게이션으로 취급하므로 CORS/CORB 가 적용되지 않고,
+    // Apps Script의 doPost(긴 본문도 안전)가 정상적으로 처리합니다.
     resultEl.textContent = '⏳ 업로드 중...';
-    await submitViaIframe(DATA_URL, { action: 'upload', password: 'stage', ...data });
+    await submitViaIframe(DATA_URL, { password: 'stage', ...data });
 
     resultEl.textContent = '⏳ 업로드 요청 전송됨, 확인 중...';
 
     // Verify by polling the sheet. Apps Script writes are synchronous, but
     // SpreadsheetApp can take a moment to flush.
     let verified = false;
+    const wantTitle   = String(data.title).trim();
+    const wantCurator = String(data.curator).trim();
+    const wantYear    = String(data.curationYear || '').trim();
     for (let attempt = 0; attempt < 5 && !verified; attempt++) {
       await new Promise(r => setTimeout(r, attempt === 0 ? 1500 : 2000));
       try {
@@ -1194,11 +1206,10 @@ async function handleUploadSubmit(e) {
         if (verifyRes.ok) {
           const fresh = await verifyRes.json();
           if (Array.isArray(fresh)) {
-            const wantTitle = String(data.title).trim();
-            const wantCurator = String(data.curator).trim();
             verified = fresh.some(m =>
               String(m.title ?? '').trim() === wantTitle &&
-              String(m.curator ?? '').trim() === wantCurator
+              String(m.curator ?? '').trim() === wantCurator &&
+              (!wantYear || String(m.curationYear ?? '').trim() === wantYear)
             );
             if (verified) musicals = fresh;
           }
