@@ -1127,18 +1127,14 @@ async function handleUploadSubmit(e) {
   resultEl.className = 'upload-result';
 
   try {
-    // Use POST with JSON body to avoid URL length limits and prevent data loss
-    const payload = { action: 'upload', password: 'stage', ...data };
-    const res = await fetch(DATA_URL, {
-      method: 'POST',
-      redirect: 'follow',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload),
-    });
+    // GET must be used — Apps Script only adds CORS headers for GET, not POST
+    const params = new URLSearchParams({ action: 'upload', password: 'stage' });
+    Object.entries(data).forEach(([k, v]) => params.set(k, v));
+    const res = await fetch(`${DATA_URL}?${params.toString()}`, { redirect: 'follow' });
     const text = await res.text();
     let json;
     try { json = JSON.parse(text); } catch {
-      throw new Error(`서버 응답 오류 (JSON 파싱 실패): ${text.slice(0, 100)}`);
+      throw new Error(`서버 응답 오류 (JSON 파싱 실패): ${text.slice(0, 120)}`);
     }
     // Require explicit success:true — prevents false-positive when server returns data array
     if (json.success !== true) {
