@@ -185,6 +185,7 @@ body {
     border-top: none;
     padding-bottom: 0;
     order: 0;
+    margin-left: 48px;
   }
 
   .nav-right {
