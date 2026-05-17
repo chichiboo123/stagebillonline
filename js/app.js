@@ -1024,215 +1024,64 @@ function closeModal() {
 }
 
 // ==========================================
-// Upload
+// Upload (Google Forms 임베드)
 // ==========================================
+// 업로드는 Google Forms로 위임합니다.
+//   - 응답은 Google Forms가 직접 연결된 스프레드시트에 기록 → CORS/iframe 트릭 불필요
+//   - 폼 질문 제목을 시트 컬럼명(title, category, ...)과 똑같이 만들면 유지보수 단순
+// 폼 교체 시 아래 URL만 바꾸면 됩니다.
+const UPLOAD_FORM_BASE = 'https://forms.gle/Ag8QvdduCh3L4DDC6';
+const UPLOAD_FORM_EMBED = `${UPLOAD_FORM_BASE}?embedded=true`;
+const UPLOAD_PASSWORD = 'stage';
+
 function setupUpload() {
   const btn     = document.getElementById('uploadBtn');
-  const overlay = document.getElementById('uploadOverlay');
   const closeBtn = document.getElementById('uploadClose');
   const pwdInput = document.getElementById('uploadPassword');
   const pwdBtn   = document.getElementById('uploadPasswordBtn');
-  const form     = document.getElementById('uploadForm');
 
-  btn.addEventListener('click', () => {
-    overlay.classList.add('active');
-    document.getElementById('uploadPasswordStep').style.display = '';
-    document.getElementById('uploadFormStep').style.display = 'none';
-    document.getElementById('uploadPwdError').textContent = '';
-    document.getElementById('uploadResult').textContent = '';
-    pwdInput.value = '';
-    setTimeout(() => pwdInput.focus(), 80);
-  });
-
+  btn.addEventListener('click', openUpload);
   closeBtn.addEventListener('click', closeUpload);
 
   pwdBtn.addEventListener('click', checkUploadPassword);
   pwdInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkUploadPassword(); });
-  form.addEventListener('submit', handleUploadSubmit);
+}
+
+function openUpload() {
+  const overlay = document.getElementById('uploadOverlay');
+  const pwdInput = document.getElementById('uploadPassword');
+  overlay.classList.add('active');
+  document.getElementById('uploadPasswordStep').style.display = '';
+  document.getElementById('uploadFormStep').style.display = 'none';
+  document.getElementById('uploadPwdError').textContent = '';
+  // iframe src를 비워 두면 모달을 다시 열었을 때 이전 입력이 남지 않음
+  const frame = document.getElementById('uploadFormFrame');
+  if (frame) frame.src = 'about:blank';
+  pwdInput.value = '';
+  setTimeout(() => pwdInput.focus(), 80);
 }
 
 function closeUpload() {
   document.getElementById('uploadOverlay').classList.remove('active');
-}
-
-function populateCategoryDatalist() {
-  const dl = document.getElementById('categoryList');
-  if (!dl) return;
-  dl.innerHTML = '';
-  const existing = [...new Set(musicals.map(m => m.category).filter(Boolean))].sort();
-  existing.forEach(cat => {
-    const opt = document.createElement('option');
-    opt.value = cat;
-    dl.appendChild(opt);
-  });
+  // 닫을 때 iframe도 해제 → 다음 열기 때 새 폼 인스턴스 로드
+  const frame = document.getElementById('uploadFormFrame');
+  if (frame) frame.src = 'about:blank';
 }
 
 function checkUploadPassword() {
   const pwd = document.getElementById('uploadPassword').value;
-  if (pwd === 'stage') {
+  if (pwd === UPLOAD_PASSWORD) {
     document.getElementById('uploadPasswordStep').style.display = 'none';
     document.getElementById('uploadFormStep').style.display = '';
-    populateCategoryDatalist();
+    const frame = document.getElementById('uploadFormFrame');
+    if (frame) frame.src = UPLOAD_FORM_EMBED;
+    const newTabLink = document.getElementById('uploadFormNewTab');
+    if (newTabLink) newTabLink.href = UPLOAD_FORM_BASE;
   } else {
     const err = document.getElementById('uploadPwdError');
     err.textContent = '비밀번호가 올바르지 않습니다.';
     document.getElementById('uploadPassword').value = '';
     document.getElementById('uploadPassword').focus();
-  }
-}
-
-function submitViaIframe(url, data) {
-  return new Promise((resolve, reject) => {
-    const name = 'upload-frame-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-
-    const iframe = document.createElement('iframe');
-    iframe.name = name;
-    iframe.style.display = 'none';
-    iframe.setAttribute('aria-hidden', 'true');
-
-    const form = document.createElement('form');
-    // POST로 보내야 긴 본문(설명·아이디어 노트·썸네일 URL 등)이 URL 길이
-    // 제한(~8KB)에 잘리지 않습니다. Apps Script doPost가 받습니다.
-    form.method = 'POST';
-    form.action = url;
-    form.target = name;
-    form.enctype = 'application/x-www-form-urlencoded';
-    form.acceptCharset = 'UTF-8';
-    form.style.display = 'none';
-
-    for (const [k, v] of Object.entries(data)) {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = k;
-      input.value = v;
-      form.appendChild(input);
-    }
-
-    let settled = false;
-    const cleanup = () => {
-      setTimeout(() => {
-        try { iframe.remove(); } catch {}
-        try { form.remove(); } catch {}
-      }, 500);
-    };
-
-    iframe.addEventListener('load', () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-      cleanup();
-    });
-
-    setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      reject(new Error('업로드 요청 시간 초과 (30초)'));
-      cleanup();
-    }, 30000);
-
-    document.body.appendChild(iframe);
-    document.body.appendChild(form);
-    form.submit();
-  });
-}
-
-async function handleUploadSubmit(e) {
-  e.preventDefault();
-  const resultEl = document.getElementById('uploadResult');
-  const submitBtn = e.target.querySelector('.upload-submit-btn');
-
-  // Collect form data
-  const fd = new FormData(e.target);
-  const data = {};
-  fd.forEach((val, key) => { if (String(val).trim()) data[key] = String(val).trim(); });
-
-  // Validate required fields (references is optional)
-  const requiredFields = [
-    { key: 'title',         label: '작품명' },
-    { key: 'category',      label: '카테고리' },
-    { key: 'curator',       label: '큐레이터' },
-    { key: 'curationYear',  label: '작품 연도' },
-    { key: 'description',   label: '작품 소개' },
-    { key: 'number1_title', label: '추천 넘버 ① 제목' },
-    { key: 'number1_desc',  label: '추천 넘버 ① 설명' },
-    { key: 'ideaNotes',     label: '수업 아이디어 노트' },
-    { key: 'playlistLink',  label: 'YouTube 링크' },
-    { key: 'hashtags',      label: '해시태그' },
-    { key: 'thumbnail',     label: '포스터 이미지 URL' },
-  ];
-  const missing = requiredFields.filter(f => !data[f.key]).map(f => f.label);
-  if (missing.length > 0) {
-    resultEl.textContent = `⚠️ 필수 항목을 모두 입력해주세요: ${missing.join(', ')}`;
-    resultEl.className = 'upload-result error';
-    return;
-  }
-
-  // Normalize hashtags: strip whitespace, ensure '#' prefix, comma-join
-  // (시트에는 "#힐링,#위로" 형식으로 저장 → handleRead가 배열로 다시 분리)
-  if (data.hashtags) {
-    data.hashtags = data.hashtags
-      .split(/[,，]/)
-      .map(h => h.trim().replace(/^#+/, ''))
-      .filter(Boolean)
-      .map(h => `#${h}`)
-      .join(',');
-  }
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = '업로드 중...';
-  resultEl.textContent = '';
-  resultEl.className = 'upload-result';
-
-  try {
-    // fetch는 Apps Script 리다이렉트 호스트의 cross-origin JSON 응답에 대해
-    // CORB로 차단됩니다. 숨겨진 iframe form POST로 보내면 브라우저는 이를
-    // 일반 네비게이션으로 취급하므로 CORS/CORB 가 적용되지 않고,
-    // Apps Script의 doPost(긴 본문도 안전)가 정상적으로 처리합니다.
-    resultEl.textContent = '⏳ 업로드 중...';
-    await submitViaIframe(DATA_URL, { password: 'stage', ...data });
-
-    resultEl.textContent = '⏳ 업로드 요청 전송됨, 확인 중...';
-
-    // Verify by polling the sheet. Apps Script writes are synchronous, but
-    // SpreadsheetApp can take a moment to flush.
-    let verified = false;
-    const wantTitle   = String(data.title).trim();
-    const wantCurator = String(data.curator).trim();
-    const wantYear    = String(data.curationYear || '').trim();
-    for (let attempt = 0; attempt < 5 && !verified; attempt++) {
-      await new Promise(r => setTimeout(r, attempt === 0 ? 1500 : 2000));
-      try {
-        const verifyRes = await fetch(`${DATA_URL}?t=${Date.now()}`, { cache: 'no-store' });
-        if (verifyRes.ok) {
-          const fresh = await verifyRes.json();
-          if (Array.isArray(fresh)) {
-            verified = fresh.some(m =>
-              String(m.title ?? '').trim() === wantTitle &&
-              String(m.curator ?? '').trim() === wantCurator &&
-              (!wantYear || String(m.curationYear ?? '').trim() === wantYear)
-            );
-            if (verified) musicals = fresh;
-          }
-        }
-      } catch {
-        // Try again on next attempt
-      }
-    }
-
-    if (verified) {
-      resultEl.textContent = '✅ 업로드 성공! 스프레드시트에 추가되었습니다.';
-      resultEl.className = 'upload-result success';
-      e.target.reset();
-    } else {
-      resultEl.textContent = '⚠️ 업로드 요청을 전송했지만 시트에서 확인되지 않았습니다. 잠시 후 페이지를 새로고침하여 확인해주세요.';
-      resultEl.className = 'upload-result error';
-    }
-  } catch (err) {
-    resultEl.textContent = `❌ 오류: ${err.message}`;
-    resultEl.className = 'upload-result error';
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = '업로드';
   }
 }
 

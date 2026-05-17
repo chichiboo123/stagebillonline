@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260224">
+  <link rel="stylesheet" href="css/style.css?v=20260517c">
 </head>
 <body>
   <!-- Navigation -->
@@ -152,7 +152,7 @@
 
   <!-- Upload Overlay -->
   <div class="upload-overlay" id="uploadOverlay">
-    <div class="upload-modal">
+    <div class="upload-modal" id="uploadModal">
       <button class="upload-close" id="uploadClose">&times;</button>
 
       <!-- Step 1: 비밀번호 -->
@@ -166,74 +166,23 @@
         <p class="upload-pwd-error" id="uploadPwdError"></p>
       </div>
 
-      <!-- Step 2: 업로드 폼 (간소화) -->
+      <!-- Step 2: Google Form 임베드 -->
       <div id="uploadFormStep" style="display:none;">
-        <h2 class="upload-modal-title">새 내용 업로드</h2>
-        <form id="uploadForm" class="upload-form" autocomplete="off">
-          <div class="upload-field">
-            <label for="upTitle">작품명 <span class="req">*</span></label>
-            <input id="upTitle" type="text" name="title" placeholder="작품명" />
-          </div>
-          <div class="upload-field">
-            <label for="categoryInput">카테고리 <span class="req">*</span></label>
-            <input type="text" name="category" id="categoryInput" list="categoryList" placeholder="카테고리 선택 또는 직접 입력" autocomplete="off" />
-            <datalist id="categoryList"></datalist>
-          </div>
-          <div class="upload-field">
-            <label for="upCurator">큐레이터 <span class="req">*</span></label>
-            <input id="upCurator" type="text" name="curator" placeholder="큐레이터 이름" />
-          </div>
-          <div class="upload-field">
-            <label for="upYear">작품 연도 <span class="req">*</span></label>
-            <input id="upYear" type="number" name="curationYear" placeholder="예: 2025" min="2000" max="2099" />
-          </div>
-          <div class="upload-field">
-            <label for="upDesc">작품 소개 <span class="req">*</span></label>
-            <textarea id="upDesc" name="description" rows="3" placeholder="작품 소개 (2~4문장 추천)"></textarea>
-          </div>
-          <div class="upload-field">
-            <label for="upN1Title">추천 넘버 ① <span class="req">*</span></label>
-            <div class="upload-inline-2">
-              <input id="upN1Title" type="text" name="number1_title" placeholder="넘버 제목" />
-              <input id="upN1Desc" type="text" name="number1_desc" aria-label="추천 넘버 ① 설명" placeholder="한 줄 설명" />
-            </div>
-          </div>
-          <div class="upload-field">
-            <label for="upN2Title">추천 넘버 ② <span class="opt">(선택)</span></label>
-            <div class="upload-inline-2">
-              <input id="upN2Title" type="text" name="number2_title" placeholder="넘버 제목" />
-              <input id="upN2Desc" type="text" name="number2_desc" aria-label="추천 넘버 ② 설명" placeholder="한 줄 설명" />
-            </div>
-          </div>
-          <div class="upload-field">
-            <label for="upIdeas">수업 아이디어 노트 <span class="req">*</span></label>
-            <textarea id="upIdeas" name="ideaNotes" rows="3" placeholder="수업 활용 아이디어"></textarea>
-          </div>
-          <div class="upload-field">
-            <label for="upPlaylist">YouTube 링크 <span class="req">*</span></label>
-            <input id="upPlaylist" type="url" name="playlistLink" placeholder="https://youtube.com/..." />
-          </div>
-          <div class="upload-field">
-            <label for="upRefs">참고자료 <span class="opt">(선택)</span></label>
-            <input id="upRefs" type="text" name="references" placeholder="제목::URL  (여러 개는 | 로 구분)" />
-          </div>
-          <div class="upload-field">
-            <label for="upHashtags">해시태그 <span class="req">*</span></label>
-            <input id="upHashtags" type="text" name="hashtags" placeholder="#힐링, #위로, #공감  (쉼표로 구분)" />
-          </div>
-          <div class="upload-field">
-            <label for="upThumb">포스터 이미지 URL <span class="req">*</span></label>
-            <input id="upThumb" type="url" name="thumbnail" placeholder="https://..." />
-          </div>
-          <div class="upload-actions">
-            <button type="submit" class="upload-submit-btn">업로드</button>
-          </div>
-        </form>
-        <div class="upload-result" id="uploadResult"></div>
+        <div class="upload-form-header">
+          <h2 class="upload-modal-title">새 내용 업로드</h2>
+          <a id="uploadFormNewTab" href="#" target="_blank" rel="noopener noreferrer" class="upload-newtab-link">
+            <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+            새 창에서 열기
+          </a>
+        </div>
+        <p class="upload-modal-sub">제출 후 스프레드시트에 자동으로 반영됩니다. (반영까지 1~2분 소요)</p>
+        <div class="upload-form-frame-wrap">
+          <iframe id="uploadFormFrame" src="about:blank" title="STAGEBILL 업로드 폼" loading="lazy"></iframe>
+        </div>
       </div>
     </div>
   </div>
 
-  <script src="js/app.js?v=20260517b"></script>
+  <script src="js/app.js?v=20260517c"></script>
 </body>
 </html>

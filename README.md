@@ -18,8 +18,12 @@ npx serve .
 
 ## 데이터 관리
 
-데이터는 Google Sheets ↔ Apps Script 연동으로 관리합니다.
-콘텐츠 추가·수정은 스프레드시트에서 직접 진행하거나, 앱 내 **업로드 버튼**을 사용하세요.
+데이터는 Google Sheets ↔ Apps Script(읽기 전용) 연동으로 관리합니다.
+- **읽기**: Apps Script `doGet` → 시트 → JSON
+- **쓰기(업로드)**: Google Forms → 시트에 자동 저장 (앱 내 **업로드 버튼**이 폼을 임베드)
+
+업로드 폼은 `js/app.js` 상단 `UPLOAD_FORM_BASE` 상수에 설정합니다.
+폼 질문 제목은 시트 컬럼명(`title`, `category`, …)과 **똑같이** 만들어야 자동으로 매핑됩니다.
 
 ### 주요 스프레드시트 열
 
