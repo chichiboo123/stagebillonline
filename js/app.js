@@ -1127,22 +1127,51 @@ async function handleUploadSubmit(e) {
   resultEl.className = 'upload-result';
 
   try {
-    // GET must be used — Apps Script only adds CORS headers for GET, not POST
+    // Apps Script redirects /exec → script.googleusercontent.com, and that redirect
+    // response often lacks CORS headers (especially for long Korean payloads), causing
+    // "Failed to fetch". Workaround: send with mode:'no-cors' (browser sends the request
+    // and follows the redirect, response is opaque), then verify by re-reading the sheet.
     const params = new URLSearchParams({ action: 'upload', password: 'stage' });
     Object.entries(data).forEach(([k, v]) => params.set(k, v));
-    const res = await fetch(`${DATA_URL}?${params.toString()}`, { redirect: 'follow' });
-    const text = await res.text();
-    let json;
-    try { json = JSON.parse(text); } catch {
-      throw new Error(`서버 응답 오류 (JSON 파싱 실패): ${text.slice(0, 120)}`);
+
+    await fetch(`${DATA_URL}?${params.toString()}`, {
+      method: 'GET',
+      mode: 'no-cors',
+      redirect: 'follow',
+      cache: 'no-store',
+    });
+
+    resultEl.textContent = '⏳ 업로드 요청 전송됨, 확인 중...';
+
+    // Verify by reloading the sheet (this fetch has proper CORS — read works fine).
+    // Apps Script writes are synchronous, but give the sheet a brief moment to settle.
+    await new Promise(r => setTimeout(r, 1500));
+
+    let verified = false;
+    try {
+      const verifyRes = await fetch(`${DATA_URL}?t=${Date.now()}`, { cache: 'no-store' });
+      if (verifyRes.ok) {
+        const fresh = await verifyRes.json();
+        if (Array.isArray(fresh)) {
+          verified = fresh.some(m =>
+            (m.title || '').trim() === data.title &&
+            (m.curator || '').trim() === data.curator
+          );
+          if (verified) musicals = fresh;
+        }
+      }
+    } catch {
+      // Verification fetch failed — fall back to optimistic success message
     }
-    // Require explicit success:true — prevents false-positive when server returns data array
-    if (json.success !== true) {
-      throw new Error(json.error || `업로드 실패 (서버 응답: ${JSON.stringify(json).slice(0, 80)})`);
+
+    if (verified) {
+      resultEl.textContent = '✅ 업로드 성공! 스프레드시트에 추가되었습니다.';
+      resultEl.className = 'upload-result success';
+      e.target.reset();
+    } else {
+      resultEl.textContent = '⚠️ 업로드 요청을 전송했지만 시트에서 확인되지 않았습니다. 잠시 후 페이지를 새로고침하여 확인해주세요.';
+      resultEl.className = 'upload-result error';
     }
-    resultEl.textContent = '✅ 업로드 성공! 스프레드시트에 추가되었습니다.';
-    resultEl.className = 'upload-result success';
-    e.target.reset();
   } catch (err) {
     resultEl.textContent = `❌ 오류: ${err.message}`;
     resultEl.className = 'upload-result error';
