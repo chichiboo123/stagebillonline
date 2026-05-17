@@ -1095,7 +1095,7 @@ async function handleUploadSubmit(e) {
   const data = {};
   fd.forEach((val, key) => { if (String(val).trim()) data[key] = String(val).trim(); });
 
-  // Validate required fields
+  // Validate required fields (references is optional)
   const requiredFields = [
     { key: 'title',         label: '작품명' },
     { key: 'category',      label: '카테고리' },
@@ -1106,7 +1106,6 @@ async function handleUploadSubmit(e) {
     { key: 'number1_desc',  label: '추천 넘버 ① 설명' },
     { key: 'ideaNotes',     label: '수업 아이디어 노트' },
     { key: 'playlistLink',  label: 'YouTube 링크' },
-    { key: 'references',    label: '참고자료' },
     { key: 'hashtags',      label: '해시태그' },
     { key: 'thumbnail',     label: '포스터 이미지 URL' },
   ];
@@ -1117,9 +1116,9 @@ async function handleUploadSubmit(e) {
     return;
   }
 
-  // Parse hashtags string into array
+  // Normalize hashtags to comma-joined string for the sheet
   if (data.hashtags) {
-    data.hashtags = data.hashtags.split(/[,，]/).map(h => h.trim()).filter(Boolean);
+    data.hashtags = data.hashtags.split(/[,，]/).map(h => h.trim()).filter(Boolean).join(',');
   }
 
   submitBtn.disabled = true;
@@ -1128,14 +1127,23 @@ async function handleUploadSubmit(e) {
   resultEl.className = 'upload-result';
 
   try {
-    // Apps Script is called via GET params to ensure CORS compatibility
-    const params = new URLSearchParams({ action: 'upload', password: 'stage' });
-    Object.entries(data).forEach(([k, v]) => {
-      params.set(k, Array.isArray(v) ? v.join(',') : v);
+    // Use POST with JSON body to avoid URL length limits and prevent data loss
+    const payload = { action: 'upload', password: 'stage', ...data };
+    const res = await fetch(DATA_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
     });
-    const res = await fetch(`${DATA_URL}?${params.toString()}`, { redirect: 'follow' });
-    const json = await res.json();
-    if (json.error) throw new Error(json.error);
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch {
+      throw new Error(`서버 응답 오류 (JSON 파싱 실패): ${text.slice(0, 100)}`);
+    }
+    // Require explicit success:true — prevents false-positive when server returns data array
+    if (json.success !== true) {
+      throw new Error(json.error || `업로드 실패 (서버 응답: ${JSON.stringify(json).slice(0, 80)})`);
+    }
     resultEl.textContent = '✅ 업로드 성공! 스프레드시트에 추가되었습니다.';
     resultEl.className = 'upload-result success';
     e.target.reset();
