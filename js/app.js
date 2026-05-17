@@ -1054,11 +1054,24 @@ function closeUpload() {
   document.getElementById('uploadOverlay').classList.remove('active');
 }
 
+function populateCategoryDatalist() {
+  const dl = document.getElementById('categoryList');
+  if (!dl) return;
+  dl.innerHTML = '';
+  const existing = [...new Set(musicals.map(m => m.category).filter(Boolean))].sort();
+  existing.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    dl.appendChild(opt);
+  });
+}
+
 function checkUploadPassword() {
   const pwd = document.getElementById('uploadPassword').value;
   if (pwd === 'stage') {
     document.getElementById('uploadPasswordStep').style.display = 'none';
     document.getElementById('uploadFormStep').style.display = '';
+    populateCategoryDatalist();
   } else {
     const err = document.getElementById('uploadPwdError');
     err.textContent = '비밀번호가 올바르지 않습니다.';
