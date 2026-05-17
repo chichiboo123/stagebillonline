@@ -430,12 +430,17 @@ function setupSearch() {
   const btn = document.getElementById('searchBtn');
   const input = document.getElementById('searchInput');
 
+  input.addEventListener('focus', () => input.removeAttribute('readonly'), { once: false });
+  input.addEventListener('blur', () => { if (!input.value) input.setAttribute('readonly', ''); });
+
   btn.addEventListener('click', () => {
     container.classList.toggle('active');
     if (container.classList.contains('active')) {
+      input.removeAttribute('readonly');
       input.focus();
     } else {
       input.value = '';
+      input.setAttribute('readonly', '');
       hideSearchResults();
     }
   });
