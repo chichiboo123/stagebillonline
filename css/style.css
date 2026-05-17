@@ -1706,7 +1706,48 @@ details.upload-details { margin-top: 4px; }
 .upload-result.success { color: #4caf50; }
 .upload-result.error   { color: #ff6b6b; }
 
+/* Google Form 임베드 */
+.upload-modal { max-width: 720px; }
+.upload-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.upload-newtab-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: background 0.15s, color 0.15s;
+}
+.upload-newtab-link:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+}
+.upload-form-frame-wrap {
+  position: relative;
+  margin-top: 14px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  height: min(72vh, 720px);
+}
+#uploadFormFrame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
 @media (max-width: 480px) {
   .upload-modal { padding: 28px 18px 22px; }
   .upload-inline-2 { grid-template-columns: 1fr; }
+  .upload-form-frame-wrap { height: 65vh; }
 }
