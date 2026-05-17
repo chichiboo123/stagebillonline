@@ -1045,10 +1045,6 @@ function setupUpload() {
   });
 
   closeBtn.addEventListener('click', closeUpload);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeUpload(); });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && overlay.classList.contains('active')) closeUpload();
-  });
 
   pwdBtn.addEventListener('click', checkUploadPassword);
   pwdInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkUploadPassword(); });
@@ -1083,6 +1079,58 @@ function checkUploadPassword() {
     document.getElementById('uploadPassword').value = '';
     document.getElementById('uploadPassword').focus();
   }
+}
+
+function submitViaIframe(url, data) {
+  return new Promise((resolve, reject) => {
+    const name = 'upload-frame-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+
+    const iframe = document.createElement('iframe');
+    iframe.name = name;
+    iframe.style.display = 'none';
+    iframe.setAttribute('aria-hidden', 'true');
+
+    const form = document.createElement('form');
+    form.method = 'GET';
+    form.action = url;
+    form.target = name;
+    form.acceptCharset = 'UTF-8';
+    form.style.display = 'none';
+
+    for (const [k, v] of Object.entries(data)) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = k;
+      input.value = v;
+      form.appendChild(input);
+    }
+
+    let settled = false;
+    const cleanup = () => {
+      setTimeout(() => {
+        try { iframe.remove(); } catch {}
+        try { form.remove(); } catch {}
+      }, 500);
+    };
+
+    iframe.addEventListener('load', () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+      cleanup();
+    });
+
+    setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('업로드 요청 시간 초과 (30초)'));
+      cleanup();
+    }, 30000);
+
+    document.body.appendChild(iframe);
+    document.body.appendChild(form);
+    form.submit();
+  });
 }
 
 async function handleUploadSubmit(e) {
@@ -1127,41 +1175,35 @@ async function handleUploadSubmit(e) {
   resultEl.className = 'upload-result';
 
   try {
-    // Apps Script redirects /exec → script.googleusercontent.com, and that redirect
-    // response often lacks CORS headers (especially for long Korean payloads), causing
-    // "Failed to fetch". Workaround: send with mode:'no-cors' (browser sends the request
-    // and follows the redirect, response is opaque), then verify by re-reading the sheet.
-    const params = new URLSearchParams({ action: 'upload', password: 'stage' });
-    Object.entries(data).forEach(([k, v]) => params.set(k, v));
-
-    await fetch(`${DATA_URL}?${params.toString()}`, {
-      method: 'GET',
-      mode: 'no-cors',
-      redirect: 'follow',
-      cache: 'no-store',
-    });
+    // fetch (even with mode:'no-cors') is blocked by CORB for cross-origin JSON
+    // responses from Apps Script's redirect host. Submit via a hidden iframe form
+    // instead — the browser treats it as a navigation, so CORS/CORB don't apply,
+    // and Apps Script's doGet processes the request normally.
+    resultEl.textContent = '⏳ 업로드 중...';
+    await submitViaIframe(DATA_URL, { action: 'upload', password: 'stage', ...data });
 
     resultEl.textContent = '⏳ 업로드 요청 전송됨, 확인 중...';
 
-    // Verify by reloading the sheet (this fetch has proper CORS — read works fine).
-    // Apps Script writes are synchronous, but give the sheet a brief moment to settle.
-    await new Promise(r => setTimeout(r, 1500));
-
+    // Verify by polling the sheet. Apps Script writes are synchronous, but
+    // SpreadsheetApp can take a moment to flush.
     let verified = false;
-    try {
-      const verifyRes = await fetch(`${DATA_URL}?t=${Date.now()}`, { cache: 'no-store' });
-      if (verifyRes.ok) {
-        const fresh = await verifyRes.json();
-        if (Array.isArray(fresh)) {
-          verified = fresh.some(m =>
-            (m.title || '').trim() === data.title &&
-            (m.curator || '').trim() === data.curator
-          );
-          if (verified) musicals = fresh;
+    for (let attempt = 0; attempt < 5 && !verified; attempt++) {
+      await new Promise(r => setTimeout(r, attempt === 0 ? 1500 : 2000));
+      try {
+        const verifyRes = await fetch(`${DATA_URL}?t=${Date.now()}`, { cache: 'no-store' });
+        if (verifyRes.ok) {
+          const fresh = await verifyRes.json();
+          if (Array.isArray(fresh)) {
+            verified = fresh.some(m =>
+              (m.title || '').trim() === data.title &&
+              (m.curator || '').trim() === data.curator
+            );
+            if (verified) musicals = fresh;
+          }
         }
+      } catch {
+        // Try again on next attempt
       }
-    } catch {
-      // Verification fetch failed — fall back to optimistic success message
     }
 
     if (verified) {
