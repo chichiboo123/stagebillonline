@@ -1078,8 +1078,23 @@ async function handleUploadSubmit(e) {
   fd.forEach((val, key) => { if (String(val).trim()) data[key] = String(val).trim(); });
 
   // Validate required fields
-  if (!data.title || !data.category || !data.curator || !data.year) {
-    resultEl.textContent = '⚠️ 필수 항목(작품명, 카테고리, 큐레이터, 작품 연도)을 모두 입력해주세요.';
+  const requiredFields = [
+    { key: 'title',         label: '작품명' },
+    { key: 'category',      label: '카테고리' },
+    { key: 'curator',       label: '큐레이터' },
+    { key: 'curationYear',  label: '작품 연도' },
+    { key: 'description',   label: '작품 소개' },
+    { key: 'number1_title', label: '추천 넘버 ① 제목' },
+    { key: 'number1_desc',  label: '추천 넘버 ① 설명' },
+    { key: 'ideaNotes',     label: '수업 아이디어 노트' },
+    { key: 'playlistLink',  label: 'YouTube 링크' },
+    { key: 'references',    label: '참고자료' },
+    { key: 'hashtags',      label: '해시태그' },
+    { key: 'thumbnail',     label: '포스터 이미지 URL' },
+  ];
+  const missing = requiredFields.filter(f => !data[f.key]).map(f => f.label);
+  if (missing.length > 0) {
+    resultEl.textContent = `⚠️ 필수 항목을 모두 입력해주세요: ${missing.join(', ')}`;
     resultEl.className = 'upload-result error';
     return;
   }
@@ -1088,7 +1103,6 @@ async function handleUploadSubmit(e) {
   if (data.hashtags) {
     data.hashtags = data.hashtags.split(/[,，]/).map(h => h.trim()).filter(Boolean);
   }
-  if (!data.curationYear) data.curationYear = String(new Date().getFullYear());
 
   submitBtn.disabled = true;
   submitBtn.textContent = '업로드 중...';
