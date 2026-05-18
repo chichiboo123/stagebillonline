@@ -134,7 +134,23 @@ const CATEGORY_MAP = {
   '성장': { ko: '성장', en: 'Growth',       ja: '成長' },
   '결실': { ko: '결실', en: 'Achievement',  ja: '実り' },
   '컬러': { ko: '컬러', en: 'Colors',       ja: 'カラー' },
+  '인성': { ko: '인성', en: 'Character',    ja: '人性' },
 };
+
+// Scans loaded musicals for category_en / category_ja columns and
+// registers any unknown categories into CATEGORY_MAP automatically.
+function buildDynamicCategoryMap() {
+  musicals.forEach(m => {
+    const cat = m.category;
+    if (!cat) return;
+    if (CATEGORY_MAP[cat]) return; // already known
+    CATEGORY_MAP[cat] = {
+      ko: cat,
+      en: (m.category_en && String(m.category_en).trim()) || cat,
+      ja: (m.category_ja && String(m.category_ja).trim()) || cat,
+    };
+  });
+}
 
 function getCategoryLabel(cat) {
   return (CATEGORY_MAP[cat] && CATEGORY_MAP[cat][currentLang]) || cat;
@@ -381,6 +397,7 @@ function showDataError(msg) {
 // App Initialization
 // ==========================================
 function initApp() {
+  buildDynamicCategoryMap();
   buildNavLinks();
   setupNavbar();
   setupSearch();
