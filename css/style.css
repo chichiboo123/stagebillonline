@@ -2027,6 +2027,92 @@ details.upload-details { margin-top: 4px; }
 .ai-error-title { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0; }
 .ai-error-sub   { font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.7; }
 
+/* 학년/대상 다중 선택 칩 */
+.ai-target-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px;
+}
+.ai-target-chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: 1px solid rgba(168,85,247,0.25);
+  border-radius: 8px;
+  background: rgba(124,58,237,0.05);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  user-select: none;
+}
+.ai-target-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.ai-target-chip:hover { background: rgba(124,58,237,0.12); border-color: rgba(168,85,247,0.45); }
+.ai-target-chip:has(input:checked) {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  border-color: #a855f7;
+  color: #fff;
+}
+.ai-target-chip.ai-target-teacher {
+  border-color: rgba(236,72,153,0.35);
+  background: rgba(236,72,153,0.08);
+}
+.ai-target-chip.ai-target-teacher:hover { background: rgba(236,72,153,0.16); }
+.ai-target-chip.ai-target-teacher:has(input:checked) {
+  background: linear-gradient(135deg, #ec4899, #f472b6);
+  border-color: #f472b6;
+}
+
+/* 결과 메타(조건 요약) */
+.ai-result-meta {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: -6px 0 14px;
+  line-height: 1.6;
+  padding: 8px 12px;
+  background: rgba(124,58,237,0.06);
+  border: 1px solid rgba(168,85,247,0.15);
+  border-radius: 8px;
+}
+.ai-result-meta:empty { display: none; }
+.ai-result-meta .ai-meta-label { color: var(--text-primary); font-weight: 600; }
+
+/* 내보내기 버튼 행 */
+.ai-export-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.ai-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary);
+  border: 1px solid rgba(168,85,247,0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+.ai-export-btn:hover { background: rgba(124,58,237,0.18); border-color: rgba(168,85,247,0.55); }
+.ai-export-btn:active { transform: scale(0.97); }
+.ai-export-btn.copied {
+  background: rgba(34,197,94,0.2);
+  border-color: rgba(34,197,94,0.6);
+  color: #4ade80;
+}
+
 @media (max-width: 480px) {
   .ai-modal { padding: 28px 18px 22px; }
+  .ai-target-grid { grid-template-columns: repeat(2, 1fr); }
+  .ai-export-btn span { font-size: 0.78rem; }
 }
