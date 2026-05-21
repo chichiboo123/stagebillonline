@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260521a">
+  <link rel="stylesheet" href="css/style.css?v=20260521b">
 </head>
 <body>
   <!-- Navigation -->
@@ -38,7 +38,7 @@
     </ul>
     <!-- AI 큐레이션 버튼: 업로드 버튼 왼쪽 (데스크톱), 우하단 FAB 업로드 위 (모바일) -->
     <button class="ai-btn" id="aiCurationBtn" title="AI 큐레이션">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2a1 1 0 0 1 .894.553l2.184 4.327 4.802.678a1 1 0 0 1 .553 1.706l-3.474 3.31.82 4.675a1 1 0 0 1-1.45 1.054L12 16.027l-4.329 2.276a1 1 0 0 1-1.45-1.054l.82-4.675L3.567 9.264a1 1 0 0 1 .553-1.706l4.802-.678L11.106 2.553A1 1 0 0 1 12 2z"/></svg>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2c0 5.523 4.477 10 10 10-5.523 0-10 4.477-10 10 0-5.523-4.477-10-10-10 5.523 0 10-4.477 10-10z"/></svg>
       <span>AI 큐레이션</span>
     </button>
     <!-- 업로드 버튼: navbar 우측 끝 (데스크톱), 우하단 FAB (모바일) -->
@@ -163,7 +163,7 @@
       <!-- Step 1: 입력 폼 -->
       <div id="aiInputStep">
         <div class="ai-modal-header">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" class="ai-header-icon"><path d="M12 2a1 1 0 0 1 .894.553l2.184 4.327 4.802.678a1 1 0 0 1 .553 1.706l-3.474 3.31.82 4.675a1 1 0 0 1-1.45 1.054L12 16.027l-4.329 2.276a1 1 0 0 1-1.45-1.054l.82-4.675L3.567 9.264a1 1 0 0 1 .553-1.706l4.802-.678L11.106 2.553A1 1 0 0 1 12 2z"/></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" class="ai-header-icon"><path d="M12 2c0 5.523 4.477 10 10 10-5.523 0-10 4.477-10 10 0-5.523-4.477-10-10-10 5.523 0 10-4.477 10-10z"/></svg>
           <h2 class="ai-modal-title" data-i18n="ai.title">AI 큐레이션</h2>
         </div>
         <p class="ai-modal-sub" data-i18n="ai.subtitle">조건을 입력하면 스테이지빌에서 맞춤 작품을 골라드려요.</p>
@@ -211,7 +211,7 @@
       <!-- Step 3: 결과 -->
       <div id="aiResultStep" style="display:none;">
         <div class="ai-result-header">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" class="ai-header-icon"><path d="M12 2a1 1 0 0 1 .894.553l2.184 4.327 4.802.678a1 1 0 0 1 .553 1.706l-3.474 3.31.82 4.675a1 1 0 0 1-1.45 1.054L12 16.027l-4.329 2.276a1 1 0 0 1-1.45-1.054l.82-4.675L3.567 9.264a1 1 0 0 1 .553-1.706l4.802-.678L11.106 2.553A1 1 0 0 1 12 2z"/></svg>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" class="ai-header-icon"><path d="M12 2c0 5.523 4.477 10 10 10-5.523 0-10 4.477-10 10 0-5.523-4.477-10-10-10 5.523 0 10-4.477 10-10z"/></svg>
           <span class="ai-result-title" data-i18n="ai.result">AI 추천 결과</span>
         </div>
         <div id="aiResultList" class="ai-result-list"></div>
@@ -263,6 +263,6 @@
     </div>
   </div>
 
-  <script src="js/app.js?v=20260521a"></script>
+  <script src="js/app.js?v=20260521b"></script>
 </body>
 </html>
