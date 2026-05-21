@@ -1216,8 +1216,18 @@ async function submitAICuration() {
       showAIError('🔑', 'API 키가 설정되지 않았어요.', 'Apps Script > 프로젝트 설정 > 스크립트 속성에\nGEMINI_API_KEY를 추가해주세요.');
       return;
     }
-    if (data.error || !Array.isArray(data.recommendations) || data.recommendations.length === 0) {
-      showAIError('😅', '추천 결과를 가져오지 못했어요.', '잠시 후 다시 시도해주세요.');
+    // Apps Script가 재배포되지 않으면 뮤지컬 배열을 그대로 반환함
+    if (Array.isArray(data)) {
+      showAIError('🔄', 'Apps Script 재배포가 필요해요.',
+        'appsscript.gs 코드를 Apps Script 에디터에 붙여넣고\n새 버전으로 재배포한 뒤 다시 시도해주세요.');
+      return;
+    }
+    if (data.error) {
+      showAIError('😅', '오류가 발생했어요.', data.error);
+      return;
+    }
+    if (!Array.isArray(data.recommendations) || data.recommendations.length === 0) {
+      showAIError('🔍', '조건에 맞는 작품을 찾지 못했어요.', '키워드나 학년 조건을 바꿔서 다시 시도해보세요.');
       return;
     }
 
