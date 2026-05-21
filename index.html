@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260517d">
+  <link rel="stylesheet" href="css/style.css?v=20260521a">
 </head>
 <body>
   <!-- Navigation -->
@@ -36,6 +36,11 @@
     <ul class="nav-links" id="navLinks">
       <li><a href="#" class="active" data-filter="all">전체</a></li>
     </ul>
+    <!-- AI 큐레이션 버튼: 업로드 버튼 왼쪽 (데스크톱), 우하단 FAB 업로드 위 (모바일) -->
+    <button class="ai-btn" id="aiCurationBtn" title="AI 큐레이션">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2a1 1 0 0 1 .894.553l2.184 4.327 4.802.678a1 1 0 0 1 .553 1.706l-3.474 3.31.82 4.675a1 1 0 0 1-1.45 1.054L12 16.027l-4.329 2.276a1 1 0 0 1-1.45-1.054l.82-4.675L3.567 9.264a1 1 0 0 1 .553-1.706l4.802-.678L11.106 2.553A1 1 0 0 1 12 2z"/></svg>
+      <span>AI 큐레이션</span>
+    </button>
     <!-- 업로드 버튼: navbar 우측 끝 (데스크톱), 우하단 FAB (모바일) -->
     <button class="upload-btn" id="uploadBtn" title="새 내용 업로드">
       <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
@@ -150,6 +155,81 @@
     </div>
   </footer>
 
+  <!-- AI Curation Overlay -->
+  <div class="ai-overlay" id="aiOverlay">
+    <div class="ai-modal" id="aiModal">
+      <button class="ai-close" id="aiClose">&times;</button>
+
+      <!-- Step 1: 입력 폼 -->
+      <div id="aiInputStep">
+        <div class="ai-modal-header">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" class="ai-header-icon"><path d="M12 2a1 1 0 0 1 .894.553l2.184 4.327 4.802.678a1 1 0 0 1 .553 1.706l-3.474 3.31.82 4.675a1 1 0 0 1-1.45 1.054L12 16.027l-4.329 2.276a1 1 0 0 1-1.45-1.054l.82-4.675L3.567 9.264a1 1 0 0 1 .553-1.706l4.802-.678L11.106 2.553A1 1 0 0 1 12 2z"/></svg>
+          <h2 class="ai-modal-title" data-i18n="ai.title">AI 큐레이션</h2>
+        </div>
+        <p class="ai-modal-sub" data-i18n="ai.subtitle">조건을 입력하면 스테이지빌에서 맞춤 작품을 골라드려요.</p>
+        <div class="ai-form">
+          <div class="ai-field">
+            <label data-i18n="ai.grade">수업 대상 학년</label>
+            <select id="aiGrade">
+              <option value="" data-i18n="ai.grade.none">선택 안 함</option>
+              <option value="초등 1-2학년">초등 1-2학년</option>
+              <option value="초등 3-4학년">초등 3-4학년</option>
+              <option value="초등 5-6학년">초등 5-6학년</option>
+              <option value="중학교 1학년">중학교 1학년</option>
+              <option value="중학교 2학년">중학교 2학년</option>
+              <option value="중학교 3학년">중학교 3학년</option>
+              <option value="고등학교 1학년">고등학교 1학년</option>
+              <option value="고등학교 2학년">고등학교 2학년</option>
+              <option value="고등학교 3학년">고등학교 3학년</option>
+            </select>
+          </div>
+          <div class="ai-field">
+            <label data-i18n="ai.keywords">수업 키워드</label>
+            <input type="text" id="aiKeywords" placeholder="예: 환경, 진로, 자존감, 우정..." autocomplete="off" />
+          </div>
+          <div class="ai-field">
+            <label data-i18n="ai.lessonType">하고 싶은 수업</label>
+            <input type="text" id="aiLessonType" placeholder="예: 감상 수업, 토론, 창작 활동, 발표..." autocomplete="off" />
+          </div>
+          <div class="ai-field">
+            <label data-i18n="ai.interests">관심 작품 / 기타 조건 <span class="ai-opt">(선택)</span></label>
+            <textarea id="aiInterests" rows="2" placeholder="예: 레미제라블처럼 사회적 메시지가 있는 작품, 노래가 쉬운 작품..."></textarea>
+          </div>
+          <button class="ai-submit-btn" id="aiSubmitBtn" data-i18n="ai.submit">AI 큐레이션 받기</button>
+        </div>
+      </div>
+
+      <!-- Step 2: 로딩 -->
+      <div id="aiLoadingStep" style="display:none;">
+        <div class="ai-loading-wrap">
+          <div class="ai-spinner"></div>
+          <p class="ai-loading-text" data-i18n="ai.loading">AI가 스테이지빌을 샅샅이 뒤지고 있어요...</p>
+          <p class="ai-loading-sub" data-i18n="ai.loadingSub">잠시만 기다려 주세요 ✨</p>
+        </div>
+      </div>
+
+      <!-- Step 3: 결과 -->
+      <div id="aiResultStep" style="display:none;">
+        <div class="ai-result-header">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" class="ai-header-icon"><path d="M12 2a1 1 0 0 1 .894.553l2.184 4.327 4.802.678a1 1 0 0 1 .553 1.706l-3.474 3.31.82 4.675a1 1 0 0 1-1.45 1.054L12 16.027l-4.329 2.276a1 1 0 0 1-1.45-1.054l.82-4.675L3.567 9.264a1 1 0 0 1 .553-1.706l4.802-.678L11.106 2.553A1 1 0 0 1 12 2z"/></svg>
+          <span class="ai-result-title" data-i18n="ai.result">AI 추천 결과</span>
+        </div>
+        <div id="aiResultList" class="ai-result-list"></div>
+        <button class="ai-retry-btn" id="aiRetryBtn" data-i18n="ai.retry">다시 검색하기</button>
+      </div>
+
+      <!-- Step 4: 오류 / 할당량 소진 -->
+      <div id="aiErrorStep" style="display:none;">
+        <div class="ai-error-wrap">
+          <div class="ai-error-emoji" id="aiErrorEmoji">🎭</div>
+          <p class="ai-error-title" id="aiErrorTitle"></p>
+          <p class="ai-error-sub" id="aiErrorSub"></p>
+          <button class="ai-retry-btn" id="aiErrorRetryBtn" data-i18n="ai.retry">다시 시도하기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Upload Overlay -->
   <div class="upload-overlay" id="uploadOverlay">
     <div class="upload-modal" id="uploadModal">
@@ -183,6 +263,6 @@
     </div>
   </div>
 
-  <script src="js/app.js?v=20260518a"></script>
+  <script src="js/app.js?v=20260521a"></script>
 </body>
 </html>

@@ -49,6 +49,18 @@ const translations = {
     'row.works': ' 작품',
     'row.curatorPick': ' 추천',
     'footer.description': '교실에서 시작하는 뮤지컬 수업',
+    'ai.title': 'AI 큐레이션',
+    'ai.subtitle': '조건을 입력하면 스테이지빌에서 맞춤 작품을 골라드려요.',
+    'ai.grade': '수업 대상 학년',
+    'ai.grade.none': '선택 안 함',
+    'ai.keywords': '수업 키워드',
+    'ai.lessonType': '하고 싶은 수업',
+    'ai.interests': '관심 작품 / 기타 조건',
+    'ai.submit': 'AI 큐레이션 받기',
+    'ai.loading': 'AI가 스테이지빌을 샅샅이 뒤지고 있어요...',
+    'ai.loadingSub': '잠시만 기다려 주세요 ✨',
+    'ai.result': 'AI 추천 결과',
+    'ai.retry': '다시 검색하기',
   },
   en: {
     'nav.all': 'All',
@@ -83,6 +95,18 @@ const translations = {
     'row.works': ' Works',
     'row.curatorPick': "'s Picks",
     'footer.description': 'Musical Class Starts in the Classroom',
+    'ai.title': 'AI Curation',
+    'ai.subtitle': 'Enter your conditions and we\'ll pick the best works from STAGEBILL.',
+    'ai.grade': 'Target Grade',
+    'ai.grade.none': 'Any Grade',
+    'ai.keywords': 'Keywords',
+    'ai.lessonType': 'Lesson Type',
+    'ai.interests': 'Interests / Other Notes',
+    'ai.submit': 'Get AI Curation',
+    'ai.loading': 'AI is searching through STAGEBILL...',
+    'ai.loadingSub': 'Just a moment ✨',
+    'ai.result': 'AI Recommendations',
+    'ai.retry': 'Search Again',
   },
   ja: {
     'nav.all': 'すべて',
@@ -117,6 +141,18 @@ const translations = {
     'row.works': 'の作品',
     'row.curatorPick': 'のおすすめ',
     'footer.description': '教室から始まるミュージカル授業',
+    'ai.title': 'AIキュレーション',
+    'ai.subtitle': '条件を入力すると、STAGEBILLからぴったりの作品を選びます。',
+    'ai.grade': '対象学年',
+    'ai.grade.none': '指定なし',
+    'ai.keywords': '授業キーワード',
+    'ai.lessonType': 'やりたい授業',
+    'ai.interests': '気になる作品 / その他',
+    'ai.submit': 'AIキュレーションを受ける',
+    'ai.loading': 'AIがSTAGEBILLを探しています...',
+    'ai.loadingSub': 'しばらくお待ちください ✨',
+    'ai.result': 'AIのおすすめ',
+    'ai.retry': 'もう一度検索する',
   }
 };
 
@@ -407,6 +443,7 @@ function initApp() {
   renderContentRows('all');
   setupModal();
   setupUpload();
+  setupAICuration();
   applyI18n();
 }
 
@@ -1100,6 +1137,133 @@ function checkUploadPassword() {
     document.getElementById('uploadPassword').value = '';
     document.getElementById('uploadPassword').focus();
   }
+}
+
+// ==========================================
+// AI 큐레이션
+// ==========================================
+function setupAICuration() {
+  const btn       = document.getElementById('aiCurationBtn');
+  const closeBtn  = document.getElementById('aiClose');
+  const submitBtn = document.getElementById('aiSubmitBtn');
+  const retryBtn  = document.getElementById('aiRetryBtn');
+  const errorRetryBtn = document.getElementById('aiErrorRetryBtn');
+
+  btn.addEventListener('click', openAICuration);
+  closeBtn.addEventListener('click', closeAICuration);
+  submitBtn.addEventListener('click', submitAICuration);
+  retryBtn.addEventListener('click', resetAICuration);
+  errorRetryBtn.addEventListener('click', resetAICuration);
+
+  document.getElementById('aiOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('aiOverlay')) closeAICuration();
+  });
+}
+
+function openAICuration() {
+  resetAICuration();
+  document.getElementById('aiOverlay').classList.add('active');
+}
+
+function closeAICuration() {
+  document.getElementById('aiOverlay').classList.remove('active');
+}
+
+function resetAICuration() {
+  showAIStep('aiInputStep');
+}
+
+function showAIStep(stepId) {
+  ['aiInputStep', 'aiLoadingStep', 'aiResultStep', 'aiErrorStep'].forEach(id => {
+    document.getElementById(id).style.display = id === stepId ? '' : 'none';
+  });
+}
+
+async function submitAICuration() {
+  const grade      = document.getElementById('aiGrade').value.trim();
+  const keywords   = document.getElementById('aiKeywords').value.trim();
+  const lessonType = document.getElementById('aiLessonType').value.trim();
+  const interests  = document.getElementById('aiInterests').value.trim();
+
+  if (!keywords && !lessonType && !grade) {
+    document.getElementById('aiKeywords').focus();
+    return;
+  }
+
+  showAIStep('aiLoadingStep');
+
+  try {
+    const params = new URLSearchParams({
+      action: 'curate',
+      grade, keywords, lessonType, interests,
+    });
+    const res  = await fetch(`${DATA_URL}?${params}`, { redirect: 'follow' });
+    const data = await res.json();
+
+    if (data.error === 'QUOTA_EXCEEDED') {
+      showAIError(
+        '🎭',
+        '오늘의 AI 큐레이션은 문을 닫았어요.',
+        'AI 선생님이 하루치 에너지를 몽땅 쏟아부었거든요!\n내일 다시 찾아오시면 새 마음으로 맞이할게요 🌙\n(할당량은 매일 자정에 초기화됩니다)'
+      );
+      return;
+    }
+    if (data.error === 'INVALID_KEY') {
+      showAIError('🔑', 'API 키를 확인해주세요.', 'Apps Script 설정의 GEMINI_API_KEY를 확인해주세요.');
+      return;
+    }
+    if (data.error === 'API_KEY_MISSING') {
+      showAIError('🔑', 'API 키가 설정되지 않았어요.', 'Apps Script > 프로젝트 설정 > 스크립트 속성에\nGEMINI_API_KEY를 추가해주세요.');
+      return;
+    }
+    if (data.error || !Array.isArray(data.recommendations) || data.recommendations.length === 0) {
+      showAIError('😅', '추천 결과를 가져오지 못했어요.', '잠시 후 다시 시도해주세요.');
+      return;
+    }
+
+    renderAIResults(data.recommendations);
+  } catch (err) {
+    showAIError('📡', '연결에 문제가 생겼어요.', '인터넷 연결을 확인하고 다시 시도해주세요.');
+  }
+}
+
+function renderAIResults(recommendations) {
+  const list = document.getElementById('aiResultList');
+  list.innerHTML = '';
+
+  recommendations.forEach((rec, idx) => {
+    const musical = musicals.find(m => String(m.id) === String(rec.id));
+    const category = musical ? musical.category : '';
+    const color = category ? getCategoryColor(category) : '#7c3aed';
+
+    const card = document.createElement('div');
+    card.className = 'ai-result-card';
+    card.innerHTML = `
+      <div class="ai-card-top">
+        <div class="ai-card-num">${idx + 1}</div>
+        <span class="ai-card-title">${rec.title || ''}</span>
+        ${category ? `<span class="ai-card-category" style="background:${color}">${getCategoryLabel(category)}</span>` : ''}
+      </div>
+      <p class="ai-card-reason">${rec.reason || ''}</p>
+    `;
+
+    if (musical) {
+      card.addEventListener('click', () => {
+        closeAICuration();
+        openModal(musical);
+      });
+    }
+    list.appendChild(card);
+  });
+
+  showAIStep('aiResultStep');
+}
+
+function showAIError(emoji, title, sub) {
+  document.getElementById('aiErrorEmoji').textContent = emoji;
+  document.getElementById('aiErrorTitle').textContent = title;
+  document.getElementById('aiErrorSub').textContent   = sub;
+  showAIStep('aiErrorStep');
 }
 
 // ==========================================
