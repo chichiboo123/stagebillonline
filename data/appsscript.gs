@@ -77,7 +77,7 @@ function onFormSubmit(e) {
 }
 
 // 배포 검증용 — 이 문자열이 ?action=ping 응답에 그대로 나오면 새 코드가 배포된 것
-const SCRIPT_VERSION = '2026-05-21-curation-v3';
+const SCRIPT_VERSION = '2026-05-21-curation-v4-dynamic-models';
 
 // 진단용: Apps Script 에디터에서 함수 선택 → ▶ 실행 → 보기 → 로그
 // "이 프로젝트가 정말 STAGEBILL이 호출하는 그 프로젝트인가?"를 확인할 때 사용
@@ -122,13 +122,58 @@ function doPost(e) {
 // ── AI 큐레이션 (Gemini API 프록시) ──────────────────────────
 // API 키 저장: Apps Script 에디터 > 프로젝트 설정 > 스크립트 속성
 //   속성명: GEMINI_API_KEY  /  값: (발급한 키 붙여넣기)
-const GEMINI_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
+//
+// 모델은 ListModels API로 동적으로 조회하여 사용 가능한 것 중 우선순위 높은 순으로 시도합니다.
+// 모델이 deprecate되어도 자동 대응됩니다.
+
+// 선호하는 모델 패턴 (정규식). 위에서부터 우선순위.
+const MODEL_PRIORITY = [
+  /^gemini-flash-latest$/,
+  /^gemini-3\.\d+.*-flash(-latest)?$/,
+  /^gemini-2\.5-flash(-latest)?$/,
+  /^gemini-2\.5-flash-lite$/,
+  /^gemini-2\.0-flash(-001|-latest)?$/,
+  /^gemini-2\.0-flash-lite(-001|-latest)?$/,
+  /^gemini-.*-flash[^-]*$/, // 그 외 flash 계열 (안정 버전)
+  /^gemini-.*-pro[^-]*$/,   // pro 계열
 ];
+
+// 사용 가능한 generateContent 지원 모델을 우선순위대로 정렬해서 반환
+function listGenerateContentModels(apiKey) {
+  try {
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + apiKey + '&pageSize=200';
+    const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const status = res.getResponseCode();
+    if (status !== 200) {
+      const body = res.getContentText();
+      Logger.log('[ListModels] status=' + status + ' body=' + body.substring(0, 300));
+      return { error: true, status: status, snippet: body.substring(0, 300), models: [] };
+    }
+    const data = JSON.parse(res.getContentText());
+    const candidates = (data.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0)
+      .map(m => String(m.name || '').replace(/^models\//, ''))
+      .filter(Boolean);
+
+    const ranked = candidates
+      .map(name => {
+        let rank = MODEL_PRIORITY.length;
+        for (let i = 0; i < MODEL_PRIORITY.length; i++) {
+          if (MODEL_PRIORITY[i].test(name)) { rank = i; break; }
+        }
+        const isExperimental = /(-exp|-preview|-thinking|-image|-tts|-native-audio)/.test(name);
+        return { name: name, rank: rank + (isExperimental ? 100 : 0) };
+      })
+      .sort((a, b) => a.rank - b.rank)
+      .map(x => x.name);
+
+    Logger.log('[ListModels] ' + candidates.length + '개 사용 가능, 시도 순서: ' + ranked.slice(0, 8).join(', '));
+    return { models: ranked };
+  } catch (err) {
+    Logger.log('[ListModels] 예외: ' + err.message);
+    return { error: true, status: 0, snippet: err.message, models: [] };
+  }
+}
 
 // params: e.parameter (GET) 또는 JSON body (POST)
 function handleAICuration(params) {
@@ -163,8 +208,23 @@ function handleAICuration(params) {
 
     const prompt = buildCurationPrompt(grade, keywords, lessonType, interests, musicalList);
 
+    // 동적 모델 조회 (ListModels API)
+    const listResult = listGenerateContentModels(apiKey);
+    if (listResult.error) {
+      return jsonResponse({
+        error: 'LIST_MODELS_FAILED',
+        lastStatus: listResult.status,
+        lastSnippet: listResult.snippet,
+      });
+    }
+    if (!listResult.models.length) {
+      return jsonResponse({ error: 'NO_AVAILABLE_MODELS' });
+    }
+
+    // 상위 5개만 시도 (Apps Script 6분 제한 회피)
+    const modelsToTry = listResult.models.slice(0, 5);
     const attempts = [];
-    for (const model of GEMINI_MODELS) {
+    for (const model of modelsToTry) {
       const result = callGemini(apiKey, model, prompt);
       attempts.push({ model: model, status: result.status, snippet: result.snippet });
       Logger.log('[Gemini] ' + model + ' → status=' + result.status + ' / ' + (result.snippet || ''));
@@ -174,13 +234,13 @@ function handleAICuration(params) {
       return jsonResponse({ recommendations: result.recommendations, model: model });
     }
 
-    // 모든 모델 실패: 마지막 시도의 상태를 그대로 노출하여 진단 가능하게 함
     const last = attempts[attempts.length - 1] || {};
     return jsonResponse({
       error: 'ALL_MODELS_FAILED',
       lastStatus: last.status,
       lastSnippet: last.snippet,
       attempts: attempts,
+      availableModels: listResult.models.slice(0, 20),
     });
   } catch (err) {
     return jsonResponse({ error: err.message });

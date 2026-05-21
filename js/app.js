@@ -1234,20 +1234,40 @@ async function submitAICuration() {
     }
     if (data.error === 'ALL_MODELS_FAILED') {
       console.error('[STAGEBILL AI] 모든 Gemini 모델 호출 실패:', data.attempts);
+      console.error('[STAGEBILL AI] 사용 가능했던 모델 목록:', data.availableModels);
       const status = data.lastStatus;
       let title = 'AI 호출에 실패했어요.';
       let sub   = '콘솔(F12)에서 상세 에러를 확인해주세요.';
       if (status === 403) {
         title = 'Gemini API 사용 권한이 없어요.';
-        sub = 'Google Cloud Console에서 Generative Language API를 활성화하거나,\nAPI 키 제한(HTTP/IP)을 해제해주세요.\n상세: ' + (data.lastSnippet || '');
-      } else if (status === 404) {
-        title = '모델을 찾을 수 없어요.';
-        sub = '키가 v1beta 모델 사용 권한이 없거나 지역 제한일 수 있어요.\n상세: ' + (data.lastSnippet || '');
+        sub = 'Google Cloud Console에서 Generative Language API를 활성화하거나,\nAPI 키 제한(HTTP/IP)을 해제해주세요.';
+      } else if (status === 429) {
+        title = '잠시 후 다시 시도해주세요.';
+        sub = '분당 요청 한도를 초과했습니다.';
       } else if (status === 400) {
         title = '요청 형식 오류.';
         sub = (data.lastSnippet || '').substring(0, 200);
       }
       showAIError('😵', title, sub);
+      return;
+    }
+    if (data.error === 'LIST_MODELS_FAILED') {
+      console.error('[STAGEBILL AI] ListModels 호출 실패:', data);
+      const status = data.lastStatus;
+      let title = '모델 목록을 조회할 수 없어요.';
+      let sub = (data.lastSnippet || '').substring(0, 300);
+      if (status === 403) {
+        title = 'Gemini API 사용 권한이 없어요.';
+        sub = 'Google Cloud Console에서 Generative Language API를 활성화하거나,\nAPI 키 제한(HTTP/IP/앱)을 해제해주세요.';
+      } else if (status === 400) {
+        title = 'API 키가 유효하지 않아요.';
+        sub = 'Apps Script 스크립트 속성의 GEMINI_API_KEY를 확인해주세요.';
+      }
+      showAIError('🔑', title, sub);
+      return;
+    }
+    if (data.error === 'NO_AVAILABLE_MODELS') {
+      showAIError('🤷', '사용 가능한 모델이 없어요.', '이 API 키로 generateContent 가능한 모델이 0개입니다.');
       return;
     }
     if (data.error === 'INVALID_KEY') {
