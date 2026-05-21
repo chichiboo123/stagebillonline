@@ -77,7 +77,7 @@ function onFormSubmit(e) {
 }
 
 // 배포 검증용 — 이 문자열이 ?action=ping 응답에 그대로 나오면 새 코드가 배포된 것
-const SCRIPT_VERSION = '2026-05-21-curation-v4-dynamic-models';
+const SCRIPT_VERSION = '2026-05-21-curation-v5-multi-target';
 
 // 진단용: Apps Script 에디터에서 함수 선택 → ▶ 실행 → 보기 → 로그
 // "이 프로젝트가 정말 STAGEBILL이 호출하는 그 프로젝트인가?"를 확인할 때 사용
@@ -248,19 +248,35 @@ function handleAICuration(params) {
 }
 
 function buildCurationPrompt(grade, keywords, lessonType, interests, musicals) {
-  return `당신은 교사를 위한 뮤지컬 수업 큐레이터입니다. 스테이지빌 데이터에서 교사 조건에 가장 적합한 작품을 추천해주세요.
+  const targets = String(grade || '').split(',').map(s => s.trim()).filter(Boolean);
+  const hasTeacher = targets.indexOf('교사 연수') >= 0;
+  const grades = targets.filter(t => t !== '교사 연수');
 
-[교사 조건]
-- 수업 대상 학년: ${grade      || '미지정'}
-- 수업 키워드:    ${keywords   || '없음'}
-- 하고 싶은 수업: ${lessonType || '없음'}
+  const roleLine = hasTeacher && grades.length > 0
+    ? '당신은 교사를 위한 뮤지컬 수업·연수 큐레이터입니다. 학생 수업과 교사 연수 모두에 활용할 수 있는 작품을 추천해주세요.'
+    : hasTeacher
+    ? '당신은 교사 연수 큐레이터입니다. 교사의 전문성 신장과 워크숍에 적합한 뮤지컬 작품을 추천해주세요.'
+    : '당신은 교사를 위한 뮤지컬 수업 큐레이터입니다. 스테이지빌 데이터에서 교사 조건에 가장 적합한 작품을 추천해주세요.';
+
+  const targetLine = targets.length
+    ? '- 대상: ' + targets.join(', ') + (hasTeacher ? ' (교사 연수 포함 → 작품 분석/지도법/창작 워크숍 관점 고려)' : '')
+    : '- 대상: 미지정';
+
+  return `${roleLine}
+
+[조건]
+${targetLine}
+- 키워드:        ${keywords   || '없음'}
+- 하고 싶은 활동: ${lessonType || '없음'}
 - 관심 작품/기타: ${interests  || '없음'}
 
 [스테이지빌 데이터]
 ${JSON.stringify(musicals)}
 
-위 데이터에서 교사 조건에 가장 적합한 작품 3~5개를 선별하여 추천해주세요.
-선택 기준: 학년 수준, 키워드 관련성, 수업 활용도, 아이디어 노트.
+위 데이터에서 조건에 적합한 작품을 선별하여 추천해주세요.
+- 개수 제한 없음: 조건에 정말로 맞는 작품만 추천하세요. 적합도가 높은 작품이 많으면 10개 이상도 가능하고, 적으면 1-2개여도 됩니다. 억지로 채우지 마세요.
+- 선택 기준: 대상 적합성, 키워드 관련성, 수업/연수 활용도, 아이디어 노트의 풍부함.
+- 추천 이유에는 해당 대상(학생/교사)에게 왜 적합한지 구체적으로 적어주세요.
 
 반드시 아래 JSON 형식으로만 답하세요 (다른 텍스트 없이):
 {"recommendations":[{"id":"작품ID","title":"작품명","reason":"추천 이유 2-3문장"}]}`;
@@ -277,7 +293,7 @@ function callGemini(apiKey, model, prompt) {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 8192,
           responseMimeType: 'application/json',
         },
       }),

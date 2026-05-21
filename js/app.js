@@ -923,10 +923,14 @@ function setupModal() {
   window.addEventListener('popstate', () => {
     const ov = document.getElementById('modalOverlay');
     if (ov.classList.contains('active')) {
-      // Remove active without calling history.back() again (already popped)
       ov.classList.remove('active');
-      document.body.style.overflow = '';
       currentModalMusical = null;
+      if (modalOpenedFromAI) {
+        modalOpenedFromAI = false;
+        document.getElementById('aiOverlay').style.zIndex = '';
+      } else {
+        document.body.style.overflow = '';
+      }
     }
   });
 }
@@ -1089,9 +1093,16 @@ function closeModal() {
   const overlay = document.getElementById('modalOverlay');
   if (!overlay.classList.contains('active')) return;
   overlay.classList.remove('active');
-  document.body.style.overflow = '';
   currentModalMusical = null;
-  // Go back in history to remove the state we pushed on openModal
+  // AI 큐레이션에서 진입한 경우: AI 오버레이 복원, 결과 화면이 그대로 보이게 함
+  if (modalOpenedFromAI) {
+    modalOpenedFromAI = false;
+    const aiOverlay = document.getElementById('aiOverlay');
+    aiOverlay.style.zIndex = ''; // 원래 z-index로 복원
+    // 모달은 body overflow를 hidden으로 두었음. AI 오버레이도 열려 있으므로 유지
+  } else {
+    document.body.style.overflow = '';
+  }
   history.back();
 }
 
@@ -1160,6 +1171,11 @@ function checkUploadPassword() {
 // ==========================================
 // AI 큐레이션
 // ==========================================
+// 현재 화면에 표시 중인 큐레이션 (export / 모달 복귀용)
+let currentAICuration = null;
+// 모달이 AI 큐레이션에서 열렸는지 (X 누르면 큐레이션 결과로 복귀)
+let modalOpenedFromAI = false;
+
 function setupAICuration() {
   const btn       = document.getElementById('aiCurationBtn');
   const closeBtn  = document.getElementById('aiClose');
@@ -1176,18 +1192,37 @@ function setupAICuration() {
   document.getElementById('aiOverlay').addEventListener('click', (e) => {
     if (e.target === document.getElementById('aiOverlay')) closeAICuration();
   });
+
+  document.getElementById('aiExportTxt').addEventListener('click', exportAICurationTxt);
+  document.getElementById('aiExportJpg').addEventListener('click', exportAICurationJpg);
+  document.getElementById('aiExportLink').addEventListener('click', exportAICurationLink);
+  document.getElementById('aiExportCopy').addEventListener('click', exportAICurationCopy);
+
+  // URL 해시에 공유된 큐레이션이 있으면 즉시 표시
+  tryRenderSharedCuration();
 }
 
 function openAICuration() {
+  // 공유 링크 해시가 남아 있으면 제거 (사용자가 새로 시작하려는 의도)
+  if (location.hash && /ai=/.test(location.hash)) {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
   resetAICuration();
-  document.getElementById('aiOverlay').classList.add('active');
+  openAICurationOverlay();
 }
 
 function closeAICuration() {
   document.getElementById('aiOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function openAICurationOverlay() {
+  document.getElementById('aiOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
 }
 
 function resetAICuration() {
+  currentAICuration = null;
   showAIStep('aiInputStep');
 }
 
@@ -1198,7 +1233,10 @@ function showAIStep(stepId) {
 }
 
 async function submitAICuration() {
-  const grade      = document.getElementById('aiGrade').value.trim();
+  const targets = Array.from(
+    document.querySelectorAll('#aiTargetGrid input[type="checkbox"]:checked')
+  ).map(cb => cb.value);
+  const grade      = targets.join(',');
   const keywords   = document.getElementById('aiKeywords').value.trim();
   const lessonType = document.getElementById('aiLessonType').value.trim();
   const interests  = document.getElementById('aiInterests').value.trim();
@@ -1295,15 +1333,33 @@ async function submitAICuration() {
       return;
     }
 
-    renderAIResults(data.recommendations);
+    currentAICuration = {
+      query: { grade, keywords, lessonType, interests, targets },
+      recommendations: data.recommendations,
+      model: data.model,
+      createdAt: new Date().toISOString(),
+    };
+    renderAIResults(data.recommendations, currentAICuration.query);
   } catch (err) {
     showAIError('📡', '연결에 문제가 생겼어요.', '인터넷 연결을 확인하고 다시 시도해주세요.');
   }
 }
 
-function renderAIResults(recommendations) {
+function renderAIResults(recommendations, query) {
   const list = document.getElementById('aiResultList');
   list.innerHTML = '';
+
+  // 조건 요약
+  const meta = document.getElementById('aiResultMeta');
+  if (meta) {
+    const parts = [];
+    const targets = (query && query.targets) || (query && query.grade ? String(query.grade).split(',').filter(Boolean) : []);
+    if (targets && targets.length) parts.push(`<span class="ai-meta-label">대상</span> ${targets.join(', ')}`);
+    if (query && query.keywords)   parts.push(`<span class="ai-meta-label">키워드</span> ${escapeHtml(query.keywords)}`);
+    if (query && query.lessonType) parts.push(`<span class="ai-meta-label">활동</span> ${escapeHtml(query.lessonType)}`);
+    if (query && query.interests)  parts.push(`<span class="ai-meta-label">기타</span> ${escapeHtml(query.interests)}`);
+    meta.innerHTML = parts.join(' · ');
+  }
 
   recommendations.forEach((rec, idx) => {
     const musical = musicals.find(m => String(m.id) === String(rec.id));
@@ -1315,15 +1371,17 @@ function renderAIResults(recommendations) {
     card.innerHTML = `
       <div class="ai-card-top">
         <div class="ai-card-num">${idx + 1}</div>
-        <span class="ai-card-title">${rec.title || ''}</span>
+        <span class="ai-card-title">${escapeHtml(rec.title || '')}</span>
         ${category ? `<span class="ai-card-category" style="background:${color}">${getCategoryLabel(category)}</span>` : ''}
       </div>
-      <p class="ai-card-reason">${rec.reason || ''}</p>
+      <p class="ai-card-reason">${escapeHtml(rec.reason || '')}</p>
     `;
 
     if (musical) {
       card.addEventListener('click', () => {
-        closeAICuration();
+        // AI 오버레이는 유지한 채 모달만 위에 띄움. 모달 X → AI 결과로 복귀.
+        modalOpenedFromAI = true;
+        document.getElementById('aiOverlay').style.zIndex = '1900'; // 모달(2000) 아래로
         openModal(musical);
       });
     }
@@ -1333,11 +1391,220 @@ function renderAIResults(recommendations) {
   showAIStep('aiResultStep');
 }
 
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function showAIError(emoji, title, sub) {
   document.getElementById('aiErrorEmoji').textContent = emoji;
   document.getElementById('aiErrorTitle').textContent = title;
   document.getElementById('aiErrorSub').textContent   = sub;
   showAIStep('aiErrorStep');
+}
+
+// ==========================================
+// AI 큐레이션 결과 내보내기 / 공유
+// ==========================================
+
+function buildCurationText() {
+  if (!currentAICuration) return '';
+  const q = currentAICuration.query || {};
+  const lines = ['🎭 STAGEBILL AI 큐레이션 결과', ''];
+  const targets = q.targets && q.targets.length ? q.targets.join(', ') : '';
+  if (targets)      lines.push('▸ 대상:    ' + targets);
+  if (q.keywords)   lines.push('▸ 키워드:  ' + q.keywords);
+  if (q.lessonType) lines.push('▸ 활동:    ' + q.lessonType);
+  if (q.interests)  lines.push('▸ 기타:    ' + q.interests);
+  lines.push('');
+  lines.push('─'.repeat(40));
+  lines.push('');
+  currentAICuration.recommendations.forEach((rec, idx) => {
+    const musical = musicals.find(m => String(m.id) === String(rec.id));
+    const cat = musical ? getCategoryLabel(musical.category) : '';
+    lines.push(`${idx + 1}. ${rec.title || ''}${cat ? `  [${cat}]` : ''}`);
+    if (rec.reason) lines.push(`   → ${rec.reason}`);
+    lines.push('');
+  });
+  lines.push('─'.repeat(40));
+  lines.push('https://stagebill.chichiboo.link');
+  return lines.join('\n');
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function flashExportBtn(btn, label) {
+  if (!btn) return;
+  const span = btn.querySelector('span');
+  const original = span ? span.textContent : '';
+  btn.classList.add('copied');
+  if (span && label) span.textContent = label;
+  setTimeout(() => {
+    btn.classList.remove('copied');
+    if (span) span.textContent = original;
+  }, 1500);
+}
+
+function exportAICurationTxt() {
+  if (!currentAICuration) return;
+  const text = buildCurationText();
+  const ts = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  downloadBlob(blob, `stagebill-ai-${ts}.txt`);
+  flashExportBtn(document.getElementById('aiExportTxt'), '저장됨');
+}
+
+async function exportAICurationCopy() {
+  if (!currentAICuration) return;
+  const text = buildCurationText();
+  try {
+    await navigator.clipboard.writeText(text);
+    flashExportBtn(document.getElementById('aiExportCopy'), '복사됨');
+  } catch (_) {
+    // 폴백: textarea + execCommand
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); flashExportBtn(document.getElementById('aiExportCopy'), '복사됨'); }
+    catch (_) { alert('클립보드 복사에 실패했어요. 텍스트로 저장(TXT)을 이용해주세요.'); }
+    ta.remove();
+  }
+}
+
+async function exportAICurationJpg() {
+  if (!currentAICuration) return;
+  if (typeof html2canvas !== 'function') {
+    alert('이미지 변환 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해주세요.');
+    return;
+  }
+  const btn = document.getElementById('aiExportJpg');
+  flashExportBtn(btn, '생성 중...');
+  try {
+    const target = buildJpgCaptureNode();
+    document.body.appendChild(target);
+    const canvas = await html2canvas(target, {
+      backgroundColor: '#13111c',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+    target.remove();
+    canvas.toBlob((blob) => {
+      const ts = new Date().toISOString().slice(0, 10);
+      downloadBlob(blob, `stagebill-ai-${ts}.jpg`);
+      flashExportBtn(btn, '저장됨');
+    }, 'image/jpeg', 0.92);
+  } catch (err) {
+    console.error('[STAGEBILL AI] JPG export 실패:', err);
+    alert('이미지 생성에 실패했어요. TXT 다운로드를 이용해주세요.');
+    flashExportBtn(btn, 'JPG');
+  }
+}
+
+// 화면 캡처 대신 깔끔한 별도 노드를 만들어 캡처 (오버레이/그림자 영향 제거)
+function buildJpgCaptureNode() {
+  const q = currentAICuration.query || {};
+  const targets = q.targets && q.targets.length ? q.targets.join(', ') : '';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:720px;padding:36px;background:#13111c;color:#fff;font-family:"Noto Sans KR",sans-serif;';
+
+  const metaParts = [];
+  if (targets)      metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">대상</span> ${escapeHtml(targets)}</div>`);
+  if (q.keywords)   metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">키워드</span> ${escapeHtml(q.keywords)}</div>`);
+  if (q.lessonType) metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">활동</span> ${escapeHtml(q.lessonType)}</div>`);
+  if (q.interests)  metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">기타</span> ${escapeHtml(q.interests)}</div>`);
+
+  const cards = currentAICuration.recommendations.map((rec, idx) => {
+    const musical = musicals.find(m => String(m.id) === String(rec.id));
+    const category = musical ? musical.category : '';
+    const color = category ? getCategoryColor(category) : '#7c3aed';
+    const catLabel = category ? getCategoryLabel(category) : '';
+    return `
+      <div style="background:rgba(124,58,237,0.12);border:1px solid rgba(168,85,247,0.3);border-radius:12px;padding:18px 20px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">${idx + 1}</div>
+          <span style="font-size:18px;font-weight:700;color:#fff;flex:1;">${escapeHtml(rec.title || '')}</span>
+          ${catLabel ? `<span style="background:${color};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">${escapeHtml(catLabel)}</span>` : ''}
+        </div>
+        <p style="margin:0;font-size:14px;line-height:1.7;color:#cdc7e6;">${escapeHtml(rec.reason || '')}</p>
+      </div>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="#a855f7"><path d="M12 2c0 5.523 4.477 10 10 10-5.523 0-10 4.477-10 10 0-5.523-4.477-10-10-10 5.523 0 10-4.477 10-10z"/></svg>
+      <span style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">STAGEBILL AI 큐레이션</span>
+    </div>
+    ${metaParts.length ? `<div style="font-size:13px;color:#a8a3c4;line-height:1.8;margin-bottom:24px;padding:14px 16px;background:rgba(124,58,237,0.08);border-radius:10px;">${metaParts.join('')}</div>` : ''}
+    <div>${cards}</div>
+    <div style="margin-top:24px;text-align:right;font-size:11px;color:#6b6585;">stagebill.chichiboo.link · ${new Date().toLocaleDateString('ko-KR')}</div>
+  `;
+  return wrap;
+}
+
+// 공유 링크: 큐레이션을 URL 해시(base64)로 인코딩
+function encodeCurationToHash(c) {
+  const payload = {
+    r: c.recommendations.map(rec => ({ id: rec.id, title: rec.title, reason: rec.reason })),
+    q: c.query,
+    t: c.createdAt,
+  };
+  const json = JSON.stringify(payload);
+  // UTF-8 안전 base64
+  const b64 = btoa(unescape(encodeURIComponent(json)));
+  return 'ai=' + b64;
+}
+
+function decodeCurationFromHash(hash) {
+  const m = hash.match(/(?:^#|&)ai=([^&]+)/);
+  if (!m) return null;
+  try {
+    const json = decodeURIComponent(escape(atob(m[1])));
+    return JSON.parse(json);
+  } catch (err) {
+    console.warn('[STAGEBILL AI] 공유 링크 디코딩 실패:', err);
+    return null;
+  }
+}
+
+async function exportAICurationLink() {
+  if (!currentAICuration) return;
+  const hashPart = encodeCurationToHash(currentAICuration);
+  const url = `${location.origin}${location.pathname}#${hashPart}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    flashExportBtn(document.getElementById('aiExportLink'), '복사됨');
+  } catch (_) {
+    prompt('아래 링크를 복사해서 공유하세요:', url);
+  }
+}
+
+function tryRenderSharedCuration() {
+  const shared = decodeCurationFromHash(location.hash || '');
+  if (!shared || !shared.r || !shared.r.length) return;
+  currentAICuration = {
+    query: shared.q || {},
+    recommendations: shared.r,
+    createdAt: shared.t,
+  };
+  renderAIResults(shared.r, shared.q || {});
+  openAICurationOverlay();
 }
 
 // ==========================================
