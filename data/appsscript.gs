@@ -79,8 +79,19 @@ function onFormSubmit(e) {
 // ── 읽기 / AI 큐레이션 라우팅 (앱 → doGet) ──────────────────
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || 'read';
-  if (action === 'curate') return handleAICuration(e);
+  if (action === 'curate') return handleAICuration(e.parameter);
   return handleRead();
+}
+
+// AI 큐레이션은 POST로도 수신 (GET 리다이렉트 시 파라미터 소실 방지)
+function doPost(e) {
+  try {
+    const body = JSON.parse(e.postData.contents);
+    if (body.action === 'curate') return handleAICuration(body);
+    return jsonResponse({ error: 'UNKNOWN_ACTION' });
+  } catch (err) {
+    return jsonResponse({ error: err.message });
+  }
 }
 
 // ── AI 큐레이션 (Gemini API 프록시) ──────────────────────────
@@ -94,15 +105,16 @@ const GEMINI_MODELS = [
   'gemini-1.5-flash-8b',
 ];
 
-function handleAICuration(e) {
+// params: e.parameter (GET) 또는 JSON body (POST)
+function handleAICuration(params) {
   try {
     const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
     if (!apiKey) return jsonResponse({ error: 'API_KEY_MISSING' });
 
-    const grade      = String(e.parameter.grade      || '').trim();
-    const keywords   = String(e.parameter.keywords   || '').trim();
-    const lessonType = String(e.parameter.lessonType || '').trim();
-    const interests  = String(e.parameter.interests  || '').trim();
+    const grade      = String(params.grade      || '').trim();
+    const keywords   = String(params.keywords   || '').trim();
+    const lessonType = String(params.lessonType || '').trim();
+    const interests  = String(params.interests  || '').trim();
 
     // 시트에서 뮤지컬 데이터 로드
     const sheet = getMainSheet();
