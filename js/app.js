@@ -1232,8 +1232,27 @@ async function submitAICuration() {
       );
       return;
     }
+    if (data.error === 'ALL_MODELS_FAILED') {
+      console.error('[STAGEBILL AI] 모든 Gemini 모델 호출 실패:', data.attempts);
+      const status = data.lastStatus;
+      let title = 'AI 호출에 실패했어요.';
+      let sub   = '콘솔(F12)에서 상세 에러를 확인해주세요.';
+      if (status === 403) {
+        title = 'Gemini API 사용 권한이 없어요.';
+        sub = 'Google Cloud Console에서 Generative Language API를 활성화하거나,\nAPI 키 제한(HTTP/IP)을 해제해주세요.\n상세: ' + (data.lastSnippet || '');
+      } else if (status === 404) {
+        title = '모델을 찾을 수 없어요.';
+        sub = '키가 v1beta 모델 사용 권한이 없거나 지역 제한일 수 있어요.\n상세: ' + (data.lastSnippet || '');
+      } else if (status === 400) {
+        title = '요청 형식 오류.';
+        sub = (data.lastSnippet || '').substring(0, 200);
+      }
+      showAIError('😵', title, sub);
+      return;
+    }
     if (data.error === 'INVALID_KEY') {
-      showAIError('🔑', 'API 키를 확인해주세요.', 'Apps Script 설정의 GEMINI_API_KEY를 확인해주세요.');
+      console.error('[STAGEBILL AI] INVALID_KEY 응답:', data);
+      showAIError('🔑', 'API 키를 확인해주세요.', 'Apps Script 설정의 GEMINI_API_KEY를 확인해주세요.\n상세: ' + (data.attempts ? JSON.stringify(data.attempts[0]) : ''));
       return;
     }
     if (data.error === 'API_KEY_MISSING') {
