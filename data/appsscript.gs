@@ -77,7 +77,7 @@ function onFormSubmit(e) {
 }
 
 // 배포 검증용 — 이 문자열이 ?action=ping 응답에 그대로 나오면 새 코드가 배포된 것
-const SCRIPT_VERSION = '2026-05-21-curation-v2';
+const SCRIPT_VERSION = '2026-05-21-curation-v3';
 
 // 진단용: Apps Script 에디터에서 함수 선택 → ▶ 실행 → 보기 → 로그
 // "이 프로젝트가 정말 STAGEBILL이 호출하는 그 프로젝트인가?"를 확인할 때 사용
@@ -141,7 +141,6 @@ function handleAICuration(params) {
     const lessonType = String(params.lessonType || '').trim();
     const interests  = String(params.interests  || '').trim();
 
-    // 시트에서 뮤지컬 데이터 로드
     const sheet = getMainSheet();
     const rows  = sheet.getDataRange().getValues();
     if (rows.length < 2) return jsonResponse({ error: 'NO_DATA' });
@@ -152,27 +151,37 @@ function handleAICuration(params) {
       headers.forEach((h, i) => { obj[h] = row[i]; });
       return obj;
     }).filter(m => m.title).map(m => ({
-      id:         String(m.id    || ''),
-      title:      String(m.title || ''),
-      category:   String(m.category   || ''),
-      description:String(m.description|| '').substring(0, 150),
-      ideaNotes:  String(m.ideaNotes  || '').substring(0, 150),
-      hashtags:   Array.isArray(m.hashtags) ? m.hashtags.join(', ') : String(m.hashtags || ''),
-      number1:    String(m.number1_title || ''),
-      number2:    String(m.number2_title || ''),
+      id:          String(m.id    || ''),
+      title:       String(m.title || ''),
+      category:    String(m.category   || ''),
+      description: String(m.description|| '').substring(0, 150),
+      ideaNotes:   String(m.ideaNotes  || '').substring(0, 150),
+      hashtags:    Array.isArray(m.hashtags) ? m.hashtags.join(', ') : String(m.hashtags || ''),
+      number1:     String(m.number1_title || ''),
+      number2:     String(m.number2_title || ''),
     }));
 
     const prompt = buildCurationPrompt(grade, keywords, lessonType, interests, musicalList);
 
+    const attempts = [];
     for (const model of GEMINI_MODELS) {
       const result = callGemini(apiKey, model, prompt);
+      attempts.push({ model: model, status: result.status, snippet: result.snippet });
+      Logger.log('[Gemini] ' + model + ' → status=' + result.status + ' / ' + (result.snippet || ''));
+      if (result.invalidKey)    return jsonResponse({ error: 'INVALID_KEY', attempts: attempts });
       if (result.quotaExceeded) continue;
-      if (result.invalidKey)    return jsonResponse({ error: 'INVALID_KEY' });
       if (result.error)         continue;
       return jsonResponse({ recommendations: result.recommendations, model: model });
     }
 
-    return jsonResponse({ error: 'QUOTA_EXCEEDED' });
+    // 모든 모델 실패: 마지막 시도의 상태를 그대로 노출하여 진단 가능하게 함
+    const last = attempts[attempts.length - 1] || {};
+    return jsonResponse({
+      error: 'ALL_MODELS_FAILED',
+      lastStatus: last.status,
+      lastSnippet: last.snippet,
+      attempts: attempts,
+    });
   } catch (err) {
     return jsonResponse({ error: err.message });
   }
@@ -215,29 +224,34 @@ function callGemini(apiKey, model, prompt) {
       muteHttpExceptions: true,
     };
 
-    const res    = UrlFetchApp.fetch(url, options);
-    const status = res.getResponseCode();
+    const res     = UrlFetchApp.fetch(url, options);
+    const status  = res.getResponseCode();
+    const body    = res.getContentText();
+    const snippet = body.substring(0, 300);
 
-    if (status === 400) return { invalidKey: true };
-    if (status === 429 || status === 404 || status === 503) return { quotaExceeded: true };
-    if (status !== 200) return { error: true };
+    // 400은 key/요청 형식 문제일 수도 있음 — 본문에 API_KEY_INVALID가 있을 때만 invalidKey로 분류
+    if (status === 400 && /API_KEY_INVALID|API key not valid/i.test(body)) {
+      return { invalidKey: true, status: status, snippet: snippet };
+    }
+    if (status === 429) return { quotaExceeded: true, status: status, snippet: snippet };
+    if (status !== 200) return { error: true, status: status, snippet: snippet };
 
-    const data  = JSON.parse(res.getContentText());
+    const data  = JSON.parse(body);
     const parts = ((data.candidates || [])[0]?.content?.parts) || [];
     const text  = parts.filter(p => !p.thought).map(p => p.text || '').join('').trim();
-    if (!text) return { error: true };
+    if (!text) return { error: true, status: status, snippet: 'empty text in candidates' };
 
     let parsed;
     try {
       parsed = JSON.parse(text);
     } catch (_) {
       const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (!m) return { error: true };
+      if (!m) return { error: true, status: status, snippet: 'unparseable: ' + text.substring(0, 200) };
       parsed = JSON.parse(m[1].trim());
     }
-    return { recommendations: parsed.recommendations || [] };
+    return { recommendations: parsed.recommendations || [], status: status };
   } catch (err) {
-    return { error: true };
+    return { error: true, status: 0, snippet: 'exception: ' + err.message };
   }
 }
 
