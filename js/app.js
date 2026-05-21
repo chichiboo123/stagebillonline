@@ -78,6 +78,11 @@ const translations = {
     'ai.loading': 'AI가 스테이지빌을 샅샅이 뒤지고 있어요...',
     'ai.loadingSub': '잠시만 기다려 주세요 ✨',
     'ai.result': 'AI 추천 결과',
+    'ai.external': '이런 작품도 있어요',
+    'ai.external.sub': '스테이지빌에는 없지만 입력하신 조건과 관련된 작품이에요.',
+    'ai.external.kr': '한국',
+    'ai.external.intl': '해외',
+    'ai.model.label': 'AI 모델',
     'ai.retry': '다시 검색하기',
     'ai.export.txt': 'TXT', 'ai.export.txtTitle': '텍스트로 저장',
     'ai.export.jpg': 'JPG', 'ai.export.jpgTitle': '이미지로 저장',
@@ -151,6 +156,11 @@ const translations = {
     'ai.loading': 'AI is searching through STAGEBILL...',
     'ai.loadingSub': 'Just a moment ✨',
     'ai.result': 'AI Recommendations',
+    'ai.external': 'You Might Also Like',
+    'ai.external.sub': 'Not in STAGEBILL, but related to the conditions you entered.',
+    'ai.external.kr': 'Korea',
+    'ai.external.intl': 'International',
+    'ai.model.label': 'AI Model',
     'ai.retry': 'Search Again',
     'ai.export.txt': 'TXT', 'ai.export.txtTitle': 'Save as text',
     'ai.export.jpg': 'JPG', 'ai.export.jpgTitle': 'Save as image',
@@ -224,6 +234,11 @@ const translations = {
     'ai.loading': 'AIがSTAGEBILLを探しています...',
     'ai.loadingSub': 'しばらくお待ちください ✨',
     'ai.result': 'AIのおすすめ',
+    'ai.external': 'こんな作品もあります',
+    'ai.external.sub': 'STAGEBILLにはありませんが、入力された条件に関連する作品です。',
+    'ai.external.kr': '韓国',
+    'ai.external.intl': '海外',
+    'ai.model.label': 'AIモデル',
     'ai.retry': 'もう一度検索する',
     'ai.export.txt': 'TXT', 'ai.export.txtTitle': 'テキスト保存',
     'ai.export.jpg': 'JPG', 'ai.export.jpgTitle': '画像保存',
@@ -1437,18 +1452,71 @@ async function submitAICuration() {
     currentAICuration = {
       query: { grade, keywords, lessonType, interests, targets },
       recommendations: data.recommendations,
+      external: Array.isArray(data.external) ? data.external : [],
       model: data.model,
       createdAt: new Date().toISOString(),
     };
-    renderAIResults(data.recommendations, currentAICuration.query);
+    renderAIResults(currentAICuration);
   } catch (err) {
     showAIError('📡', '연결에 문제가 생겼어요.', '인터넷 연결을 확인하고 다시 시도해주세요.');
   }
 }
 
-function renderAIResults(recommendations, query) {
+// 모델 ID를 사람이 읽기 좋은 이름으로 변환 (예: gemini-2.5-flash → Gemini 2.5 Flash)
+function formatModelName(model) {
+  if (!model) return '';
+  return String(model)
+    .split('-')
+    .map(seg => /^[a-z]/.test(seg) ? seg.charAt(0).toUpperCase() + seg.slice(1) : seg)
+    .join(' ');
+}
+
+// 결과 헤더에 현재 사용 중인 AI 모델을 배터리 표시처럼 작게 노출
+function renderModelBadge(model) {
+  const badge = document.getElementById('aiModelBadge');
+  if (!badge) return;
+  if (!model) { badge.hidden = true; badge.innerHTML = ''; return; }
+  badge.hidden = false;
+  badge.title = t('ai.model.label') + ': ' + model;
+  badge.innerHTML =
+    '<span class="ai-model-dot"></span>' +
+    '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">' +
+    '<path d="M4 7h13a2 2 0 0 1 2 2v1h2v4h-2v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0 2v6h13V9H4z"/></svg>' +
+    '<span>' + escapeHtml(formatModelName(model)) + '</span>';
+}
+
+function renderExternalList(external) {
+  const section = document.getElementById('aiExternalSection');
+  const list = document.getElementById('aiExternalList');
+  if (!section || !list) return;
+  list.innerHTML = '';
+  const items = Array.isArray(external) ? external.filter(e => e && e.title) : [];
+  if (!items.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  items.forEach(item => {
+    const isKr = String(item.origin || '').toUpperCase() === 'KR';
+    const originLabel = isKr ? t('ai.external.kr') : t('ai.external.intl');
+    const card = document.createElement('div');
+    card.className = 'ai-external-card';
+    card.innerHTML = `
+      <div class="ai-external-card-top">
+        <span class="ai-external-card-title">${escapeHtml(item.title || '')}</span>
+        <span class="ai-external-origin ${isKr ? 'origin-kr' : 'origin-intl'}">${escapeHtml(originLabel)}</span>
+      </div>
+      <p class="ai-external-card-reason">${escapeHtml(item.reason || '')}</p>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function renderAIResults(curation) {
+  const recommendations = (curation && curation.recommendations) || [];
+  const query = (curation && curation.query) || {};
   const list = document.getElementById('aiResultList');
   list.innerHTML = '';
+
+  renderModelBadge(curation && curation.model);
+  renderExternalList(curation && curation.external);
 
   // 조건 요약
   const meta = document.getElementById('aiResultMeta');
@@ -1465,7 +1533,7 @@ function renderAIResults(recommendations, query) {
   recommendations.forEach((rec, idx) => {
     const musical = musicals.find(m => String(m.id) === String(rec.id));
     const category = musical ? musical.category : '';
-    const color = category ? getCategoryColor(category) : '#7c3aed';
+    const color = category ? getCategoryColor(category) : '#E50914';
 
     const card = document.createElement('div');
     card.className = 'ai-result-card';
@@ -1543,6 +1611,19 @@ function buildCurationText() {
     if (rec.reason) lines.push(`   → ${rec.reason}`);
     lines.push('');
   });
+  const external = (currentAICuration.external || []).filter(e => e && e.title);
+  if (external.length) {
+    lines.push('─'.repeat(40));
+    lines.push('');
+    lines.push('✨ ' + t('ai.external'));
+    lines.push('');
+    external.forEach((ex) => {
+      const origin = String(ex.origin || '').toUpperCase() === 'KR' ? t('ai.external.kr') : t('ai.external.intl');
+      lines.push(`• ${ex.title || ''}  [${origin}]`);
+      if (ex.reason) lines.push(`   → ${ex.reason}`);
+      lines.push('');
+    });
+  }
   lines.push('─'.repeat(40));
   lines.push('https://stagebill.chichiboo.link');
   return lines.join('\n');
@@ -1638,35 +1719,61 @@ function buildJpgCaptureNode() {
   wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:720px;padding:36px;background:#13111c;color:#fff;font-family:"Noto Sans KR","Noto Sans JP",sans-serif;';
 
   const metaParts = [];
-  if (targets)      metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">${t('ai.meta.target')}</span> ${escapeHtml(targets)}</div>`);
-  if (q.keywords)   metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">${t('ai.meta.keywords')}</span> ${escapeHtml(q.keywords)}</div>`);
-  if (q.lessonType) metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">${t('ai.meta.lessonType')}</span> ${escapeHtml(q.lessonType)}</div>`);
-  if (q.interests)  metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">${t('ai.meta.interests')}</span> ${escapeHtml(q.interests)}</div>`);
+  if (targets)      metaParts.push(`<div><span style="color:#ff5b6b;font-weight:600;">${t('ai.meta.target')}</span> ${escapeHtml(targets)}</div>`);
+  if (q.keywords)   metaParts.push(`<div><span style="color:#ff5b6b;font-weight:600;">${t('ai.meta.keywords')}</span> ${escapeHtml(q.keywords)}</div>`);
+  if (q.lessonType) metaParts.push(`<div><span style="color:#ff5b6b;font-weight:600;">${t('ai.meta.lessonType')}</span> ${escapeHtml(q.lessonType)}</div>`);
+  if (q.interests)  metaParts.push(`<div><span style="color:#ff5b6b;font-weight:600;">${t('ai.meta.interests')}</span> ${escapeHtml(q.interests)}</div>`);
 
   const cards = currentAICuration.recommendations.map((rec, idx) => {
     const musical = musicals.find(m => String(m.id) === String(rec.id));
     const category = musical ? musical.category : '';
-    const color = category ? getCategoryColor(category) : '#7c3aed';
+    const color = category ? getCategoryColor(category) : '#E50914';
     const catLabel = category ? getCategoryLabel(category) : '';
     return `
-      <div style="background:rgba(124,58,237,0.12);border:1px solid rgba(168,85,247,0.3);border-radius:12px;padding:18px 20px;margin-bottom:12px;">
+      <div style="background:#222;border:1px solid #333;border-radius:12px;padding:18px 20px;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">${idx + 1}</div>
+          <div style="width:28px;height:28px;border-radius:50%;background:#E50914;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">${idx + 1}</div>
           <span style="font-size:18px;font-weight:700;color:#fff;flex:1;">${escapeHtml(rec.title || '')}</span>
           ${catLabel ? `<span style="background:${color};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">${escapeHtml(catLabel)}</span>` : ''}
         </div>
-        <p style="margin:0;font-size:14px;line-height:1.7;color:#cdc7e6;">${escapeHtml(rec.reason || '')}</p>
+        <p style="margin:0;font-size:14px;line-height:1.7;color:#b3b3b3;">${escapeHtml(rec.reason || '')}</p>
       </div>`;
   }).join('');
 
+  const external = (currentAICuration.external || []).filter(e => e && e.title);
+  const externalBlock = external.length ? `
+    <div style="margin-top:20px;padding-top:18px;border-top:1px dashed #383838;">
+      <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:12px;">✨ ${escapeHtml(t('ai.external'))}</div>
+      ${external.map(ex => {
+        const isKr = String(ex.origin || '').toUpperCase() === 'KR';
+        const originLabel = isKr ? t('ai.external.kr') : t('ai.external.intl');
+        const oColor = isKr ? '#ff9aa2' : '#8fd3ff';
+        const oBg = isKr ? 'rgba(229,9,20,0.16)' : 'rgba(30,136,229,0.18)';
+        return `
+        <div style="background:rgba(255,255,255,0.03);border:1px solid #2e2e2e;border-radius:10px;padding:13px 16px;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="font-size:15px;font-weight:700;color:#fff;flex:1;">${escapeHtml(ex.title || '')}</span>
+            <span style="background:${oBg};color:${oColor};padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;">${escapeHtml(originLabel)}</span>
+          </div>
+          <p style="margin:0;font-size:13px;line-height:1.6;color:#b3b3b3;">${escapeHtml(ex.reason || '')}</p>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  const modelLine = currentAICuration.model
+    ? `<span style="margin-left:auto;font-size:11px;font-weight:600;color:#8a8a8a;border:1px solid #333;border-radius:999px;padding:3px 10px;">⚡ ${escapeHtml(formatModelName(currentAICuration.model))}</span>`
+    : '';
+
   wrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="#a855f7"><path d="M12 2c0 5.523 4.477 10 10 10-5.523 0-10 4.477-10 10 0-5.523-4.477-10-10-10 5.523 0 10-4.477 10-10z"/></svg>
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="#E50914"><path d="M12 2c0 5.523 4.477 10 10 10-5.523 0-10 4.477-10 10 0-5.523-4.477-10-10-10 5.523 0 10-4.477 10-10z"/></svg>
       <span style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">STAGEBILL · ${escapeHtml(t('ai.result'))}</span>
+      ${modelLine}
     </div>
-    ${metaParts.length ? `<div style="font-size:13px;color:#a8a3c4;line-height:1.8;margin-bottom:24px;padding:14px 16px;background:rgba(124,58,237,0.08);border-radius:10px;">${metaParts.join('')}</div>` : ''}
+    ${metaParts.length ? `<div style="font-size:13px;color:#b3b3b3;line-height:1.8;margin-bottom:24px;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid #333;border-radius:10px;">${metaParts.join('')}</div>` : ''}
     <div>${cards}</div>
-    <div style="margin-top:24px;text-align:right;font-size:11px;color:#6b6585;">stagebill.chichiboo.link · ${new Date().toLocaleDateString(currentLang === 'ja' ? 'ja-JP' : currentLang === 'en' ? 'en-US' : 'ko-KR')}</div>
+    ${externalBlock}
+    <div style="margin-top:24px;text-align:right;font-size:11px;color:#777;">stagebill.chichiboo.link · ${new Date().toLocaleDateString(currentLang === 'ja' ? 'ja-JP' : currentLang === 'en' ? 'en-US' : 'ko-KR')}</div>
   `;
   return wrap;
 }
@@ -1675,7 +1782,9 @@ function buildJpgCaptureNode() {
 function encodeCurationToHash(c) {
   const payload = {
     r: c.recommendations.map(rec => ({ id: rec.id, title: rec.title, reason: rec.reason })),
+    e: (c.external || []).map(ex => ({ title: ex.title, origin: ex.origin, reason: ex.reason })),
     q: c.query,
+    m: c.model || '',
     t: c.createdAt,
   };
   const json = JSON.stringify(payload);
@@ -1714,9 +1823,11 @@ function tryRenderSharedCuration() {
   currentAICuration = {
     query: shared.q || {},
     recommendations: shared.r,
+    external: Array.isArray(shared.e) ? shared.e : [],
+    model: shared.m || '',
     createdAt: shared.t,
   };
-  renderAIResults(shared.r, shared.q || {});
+  renderAIResults(currentAICuration);
   openAICurationOverlay();
 }
 
@@ -1786,7 +1897,7 @@ function renderAboutContent() {
   const c = ABOUT_CONTENT[currentLang] || ABOUT_CONTENT.ko;
   body.innerHTML =
     c.body.map(p => `<p>${escapeHtml(p)}</p>`).join('') +
-    `<div class="about-quote">${escapeHtml(c.quote).replace(/\n/g, '<br>')}</div>`;
+    `<div class="about-quote">“${escapeHtml(c.quote).replace(/\n/g, '<br>')}”</div>`;
   credits.innerHTML = c.credits.map(cr =>
     `<div class="about-credit-row"><span class="about-credit-label">${escapeHtml(cr.label)}</span><span>${escapeHtml(cr.value)}</span></div>`
   ).join('');
