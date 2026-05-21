@@ -1193,11 +1193,14 @@ async function submitAICuration() {
   showAIStep('aiLoadingStep');
 
   try {
-    const params = new URLSearchParams({
-      action: 'curate',
-      grade, keywords, lessonType, interests,
+    // POST + Content-Type: text/plain → CORS 프리플라이트 없이 동작
+    // (GET 쿼리파라미터는 Apps Script 리다이렉트 시 소실될 수 있음)
+    const res  = await fetch(DATA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'curate', grade, keywords, lessonType, interests }),
+      redirect: 'follow',
     });
-    const res  = await fetch(`${DATA_URL}?${params}`, { redirect: 'follow' });
     const data = await res.json();
 
     if (data.error === 'QUOTA_EXCEEDED') {
