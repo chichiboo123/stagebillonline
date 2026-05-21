@@ -398,7 +398,7 @@ function setupLangSwitcher() {
 // ==========================================
 // Data Loading
 // ==========================================
-const DATA_URL = 'https://script.google.com/macros/s/AKfycbzpN9MNW3FpUwco4qCc4OZkv1nUi2GLyi58LBAq3MoZG8lo9X-qb-ZfzPbiFUzfx_n2Wg/exec';
+const DATA_URL = 'https://script.google.com/macros/s/AKfycbxlzG6jhmT8YfZBSr3hxAJrHxuqlmHW2k5mEiCh2Oz8-WxlUv5uiWmVpwLZqPx1T3xCOQ/exec';
 
 async function loadData() {
   try {
