@@ -77,7 +77,7 @@ function onFormSubmit(e) {
 }
 
 // 배포 검증용 — 이 문자열이 ?action=ping 응답에 그대로 나오면 새 코드가 배포된 것
-const SCRIPT_VERSION = '2026-05-21-curation-v5-multi-target';
+const SCRIPT_VERSION = '2026-05-21-curation-v6-i18n';
 
 // 진단용: Apps Script 에디터에서 함수 선택 → ▶ 실행 → 보기 → 로그
 // "이 프로젝트가 정말 STAGEBILL이 호출하는 그 프로젝트인가?"를 확인할 때 사용
@@ -185,6 +185,7 @@ function handleAICuration(params) {
     const keywords   = String(params.keywords   || '').trim();
     const lessonType = String(params.lessonType || '').trim();
     const interests  = String(params.interests  || '').trim();
+    const lang       = String(params.lang       || 'ko').trim();
 
     const sheet = getMainSheet();
     const rows  = sheet.getDataRange().getValues();
@@ -198,6 +199,8 @@ function handleAICuration(params) {
     }).filter(m => m.title).map(m => ({
       id:          String(m.id    || ''),
       title:       String(m.title || ''),
+      title_en:    String(m.title_en || ''),
+      title_ja:    String(m.title_ja || ''),
       category:    String(m.category   || ''),
       description: String(m.description|| '').substring(0, 150),
       ideaNotes:   String(m.ideaNotes  || '').substring(0, 150),
@@ -206,7 +209,7 @@ function handleAICuration(params) {
       number2:     String(m.number2_title || ''),
     }));
 
-    const prompt = buildCurationPrompt(grade, keywords, lessonType, interests, musicalList);
+    const prompt = buildCurationPrompt(grade, keywords, lessonType, interests, musicalList, lang);
 
     // 동적 모델 조회 (ListModels API)
     const listResult = listGenerateContentModels(apiKey);
@@ -247,10 +250,15 @@ function handleAICuration(params) {
   }
 }
 
-function buildCurationPrompt(grade, keywords, lessonType, interests, musicals) {
+function buildCurationPrompt(grade, keywords, lessonType, interests, musicals, lang) {
   const targets = String(grade || '').split(',').map(s => s.trim()).filter(Boolean);
-  const hasTeacher = targets.indexOf('교사 연수') >= 0;
-  const grades = targets.filter(t => t !== '교사 연수');
+  const hasTeacher = targets.indexOf('교사') >= 0;
+  const grades = targets.filter(t => t !== '교사');
+
+  // 언어별 출력 지시
+  const langMap = { ko: 'Korean (한국어)', en: 'English', ja: 'Japanese (日本語)' };
+  const outputLang = langMap[lang] || langMap.ko;
+  const titleField = lang === 'en' ? 'title_en' : lang === 'ja' ? 'title_ja' : 'title';
 
   const roleLine = hasTeacher && grades.length > 0
     ? '당신은 교사를 위한 뮤지컬 수업·연수 큐레이터입니다. 학생 수업과 교사 연수 모두에 활용할 수 있는 작품을 추천해주세요.'
@@ -259,7 +267,7 @@ function buildCurationPrompt(grade, keywords, lessonType, interests, musicals) {
     : '당신은 교사를 위한 뮤지컬 수업 큐레이터입니다. 스테이지빌 데이터에서 교사 조건에 가장 적합한 작품을 추천해주세요.';
 
   const targetLine = targets.length
-    ? '- 대상: ' + targets.join(', ') + (hasTeacher ? ' (교사 연수 포함 → 작품 분석/지도법/창작 워크숍 관점 고려)' : '')
+    ? '- 대상: ' + targets.join(', ') + (hasTeacher ? ' (교사 포함 → 교사 연수·전문성 신장·작품 분석·지도법·창작 워크숍 관점 고려)' : '')
     : '- 대상: 미지정';
 
   return `${roleLine}
@@ -278,8 +286,11 @@ ${JSON.stringify(musicals)}
 - 선택 기준: 대상 적합성, 키워드 관련성, 수업/연수 활용도, 아이디어 노트의 풍부함.
 - 추천 이유에는 해당 대상(학생/교사)에게 왜 적합한지 구체적으로 적어주세요.
 
+[출력 언어]
+${outputLang}로 응답하세요. 작품명(title)은 데이터의 "${titleField}" 필드가 있으면 그것을, 없으면 한국어 원본(title)을 사용하세요. 추천 이유(reason)는 반드시 ${outputLang}로 작성하세요.
+
 반드시 아래 JSON 형식으로만 답하세요 (다른 텍스트 없이):
-{"recommendations":[{"id":"작품ID","title":"작품명","reason":"추천 이유 2-3문장"}]}`;
+{"recommendations":[{"id":"작품ID","title":"작품명(선택된 언어)","reason":"추천 이유 2-3문장(선택된 언어로)"}]}`;
 }
 
 function callGemini(apiKey, model, prompt) {
