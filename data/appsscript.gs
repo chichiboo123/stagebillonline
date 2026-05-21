@@ -76,9 +76,132 @@ function onFormSubmit(e) {
   }
 }
 
-// ── 읽기 (앱 → doGet) ────────────────────────────────────────
-function doGet() {
+// ── 읽기 / AI 큐레이션 라우팅 (앱 → doGet) ──────────────────
+function doGet(e) {
+  const action = (e && e.parameter && e.parameter.action) || 'read';
+  if (action === 'curate') return handleAICuration(e);
   return handleRead();
+}
+
+// ── AI 큐레이션 (Gemini API 프록시) ──────────────────────────
+// API 키 저장: Apps Script 에디터 > 프로젝트 설정 > 스크립트 속성
+//   속성명: GEMINI_API_KEY  /  값: (발급한 키 붙여넣기)
+const GEMINI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+];
+
+function handleAICuration(e) {
+  try {
+    const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+    if (!apiKey) return jsonResponse({ error: 'API_KEY_MISSING' });
+
+    const grade      = String(e.parameter.grade      || '').trim();
+    const keywords   = String(e.parameter.keywords   || '').trim();
+    const lessonType = String(e.parameter.lessonType || '').trim();
+    const interests  = String(e.parameter.interests  || '').trim();
+
+    // 시트에서 뮤지컬 데이터 로드
+    const sheet = getMainSheet();
+    const rows  = sheet.getDataRange().getValues();
+    if (rows.length < 2) return jsonResponse({ error: 'NO_DATA' });
+    const headers = rows[0];
+
+    const musicalList = rows.slice(1).map(row => {
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = row[i]; });
+      return obj;
+    }).filter(m => m.title).map(m => ({
+      id:         String(m.id    || ''),
+      title:      String(m.title || ''),
+      category:   String(m.category   || ''),
+      description:String(m.description|| '').substring(0, 150),
+      ideaNotes:  String(m.ideaNotes  || '').substring(0, 150),
+      hashtags:   Array.isArray(m.hashtags) ? m.hashtags.join(', ') : String(m.hashtags || ''),
+      number1:    String(m.number1_title || ''),
+      number2:    String(m.number2_title || ''),
+    }));
+
+    const prompt = buildCurationPrompt(grade, keywords, lessonType, interests, musicalList);
+
+    for (const model of GEMINI_MODELS) {
+      const result = callGemini(apiKey, model, prompt);
+      if (result.quotaExceeded) continue;
+      if (result.invalidKey)    return jsonResponse({ error: 'INVALID_KEY' });
+      if (result.error)         continue;
+      return jsonResponse({ recommendations: result.recommendations, model: model });
+    }
+
+    return jsonResponse({ error: 'QUOTA_EXCEEDED' });
+  } catch (err) {
+    return jsonResponse({ error: err.message });
+  }
+}
+
+function buildCurationPrompt(grade, keywords, lessonType, interests, musicals) {
+  return `당신은 교사를 위한 뮤지컬 수업 큐레이터입니다. 스테이지빌 데이터에서 교사 조건에 가장 적합한 작품을 추천해주세요.
+
+[교사 조건]
+- 수업 대상 학년: ${grade      || '미지정'}
+- 수업 키워드:    ${keywords   || '없음'}
+- 하고 싶은 수업: ${lessonType || '없음'}
+- 관심 작품/기타: ${interests  || '없음'}
+
+[스테이지빌 데이터]
+${JSON.stringify(musicals)}
+
+위 데이터에서 교사 조건에 가장 적합한 작품 3~5개를 선별하여 추천해주세요.
+선택 기준: 학년 수준, 키워드 관련성, 수업 활용도, 아이디어 노트.
+
+반드시 아래 JSON 형식으로만 답하세요 (다른 텍스트 없이):
+{"recommendations":[{"id":"작품ID","title":"작품명","reason":"추천 이유 2-3문장"}]}`;
+}
+
+function callGemini(apiKey, model, prompt) {
+  try {
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+              + model + ':generateContent?key=' + apiKey;
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+          responseMimeType: 'application/json',
+        },
+      }),
+      muteHttpExceptions: true,
+    };
+
+    const res    = UrlFetchApp.fetch(url, options);
+    const status = res.getResponseCode();
+
+    if (status === 400) return { invalidKey: true };
+    if (status === 429 || status === 404 || status === 503) return { quotaExceeded: true };
+    if (status !== 200) return { error: true };
+
+    const data  = JSON.parse(res.getContentText());
+    const parts = ((data.candidates || [])[0]?.content?.parts) || [];
+    const text  = parts.filter(p => !p.thought).map(p => p.text || '').join('').trim();
+    if (!text) return { error: true };
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (_) {
+      const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (!m) return { error: true };
+      parsed = JSON.parse(m[1].trim());
+    }
+    return { recommendations: parsed.recommendations || [] };
+  } catch (err) {
+    return { error: true };
+  }
 }
 
 function handleRead() {
