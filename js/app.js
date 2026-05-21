@@ -410,10 +410,28 @@ async function loadData() {
     if (!Array.isArray(data) || data.length === 0) throw new Error('빈 배열 — 스프레드시트에 데이터가 없거나 시트명이 다릅니다');
     musicals = data;
     console.log(`[STAGEBILL] 데이터 로딩 성공 (${musicals.length}개)`);
+    pingDeployment();
     initApp();
   } catch (err) {
     console.error('[STAGEBILL] 데이터 로딩 실패 →', err.message);
     showDataError(err.message);
+  }
+}
+
+// 배포된 Apps Script가 최신 코드(action=ping 지원)인지 검증
+async function pingDeployment() {
+  try {
+    const res = await fetch(`${DATA_URL}?action=ping`, { redirect: 'follow' });
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      console.warn('[STAGEBILL] ⚠️ Apps Script가 옛 버전입니다. ?action=ping이 인식되지 않아 데이터 배열이 반환됨. data/appsscript.gs 전체를 에디터에 붙여넣고 [배포 관리 → 편집 → 새 버전 → 배포] 하세요.');
+    } else if (data && data.ok) {
+      console.log(`[STAGEBILL] Apps Script 버전: ${data.version} / Gemini 키: ${data.hasGeminiKey ? '설정됨' : '미설정'} / 시트: ${data.sheet}`);
+    } else {
+      console.warn('[STAGEBILL] ping 응답이 비정상:', data);
+    }
+  } catch (err) {
+    console.warn('[STAGEBILL] ping 실패:', err.message);
   }
 }
 
@@ -1204,6 +1222,7 @@ async function submitAICuration() {
     });
     const res  = await fetch(`${DATA_URL}?${params.toString()}`, { redirect: 'follow' });
     const data = await res.json();
+    console.log('[STAGEBILL AI] 응답:', data);
 
     if (data.error === 'QUOTA_EXCEEDED') {
       showAIError(
@@ -1221,10 +1240,11 @@ async function submitAICuration() {
       showAIError('🔑', 'API 키가 설정되지 않았어요.', 'Apps Script > 프로젝트 설정 > 스크립트 속성에\nGEMINI_API_KEY를 추가해주세요.');
       return;
     }
-    // Apps Script가 재배포되지 않으면 뮤지컬 배열을 그대로 반환함
+    // Apps Script가 새 코드로 재배포되지 않은 경우 doGet이 그대로 handleRead를 호출하여 배열 반환
     if (Array.isArray(data)) {
-      showAIError('🔄', 'Apps Script 재배포가 필요해요.',
-        'appsscript.gs 코드를 Apps Script 에디터에 붙여넣고\n새 버전으로 재배포한 뒤 다시 시도해주세요.');
+      console.warn('[STAGEBILL AI] 큐레이션 대신 데이터 배열이 반환됨 — 배포된 Apps Script 코드에 action=curate 분기가 없습니다.');
+      showAIError('🔄', 'Apps Script 코드 업데이트가 필요해요.',
+        '에디터에서 data/appsscript.gs 코드를 전체 교체하고 저장(Ctrl+S)한 뒤\n[배포 관리 → 편집(연필) → 새 버전 → 배포]를 해주세요.\n자세한 진단은 콘솔(F12)을 확인해주세요.');
       return;
     }
     if (data.error) {
