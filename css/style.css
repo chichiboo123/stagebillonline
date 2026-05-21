@@ -2116,3 +2116,129 @@ details.upload-details { margin-top: 4px; }
   .ai-target-grid { grid-template-columns: repeat(2, 1fr); }
   .ai-export-btn span { font-size: 0.78rem; }
 }
+
+/* ── 소개 버튼 (네비) ─────────────────────────────────────── */
+.about-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  align-self: center;
+}
+.about-btn:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+  border-color: rgba(255,255,255,0.35);
+}
+@media (min-width: 769px) {
+  .about-btn { margin-left: 12px; }
+}
+@media (max-width: 768px) {
+  .about-btn {
+    position: fixed;
+    bottom: 146px; /* ai-btn 위 */
+    right: 18px;
+    z-index: 999;
+    border-radius: 50%;
+    width: 46px;
+    height: 46px;
+    padding: 0;
+    justify-content: center;
+    background: rgba(20,15,40,0.85);
+    border-color: rgba(168,85,247,0.4);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    backdrop-filter: blur(6px);
+  }
+  .about-btn span { display: none; }
+}
+
+/* ── 소개 오버레이 / 모달 ─────────────────────────────────── */
+.about-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 2100;
+  padding: 16px;
+}
+.about-overlay.active { display: flex; align-items: center; justify-content: center; }
+.about-modal {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: linear-gradient(150deg, #1a1530 0%, #100c20 100%);
+  border-radius: 16px;
+  padding: 40px 36px 32px;
+  border: 1px solid rgba(168,85,247,0.25);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.about-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.about-close:hover { color: var(--text-primary); }
+.about-header { text-align: center; margin-bottom: 22px; }
+.about-logo {
+  font-family: 'Bebas Neue', 'Noto Sans KR', sans-serif;
+  font-size: 2.6rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 4px;
+}
+.about-tagline { color: var(--text-secondary); font-size: 0.88rem; margin: 0; }
+.about-body p {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.85;
+  margin: 0 0 14px;
+}
+.about-body .about-quote {
+  margin: 22px 0;
+  padding: 16px 18px;
+  border-left: 3px solid #a855f7;
+  background: rgba(124,58,237,0.08);
+  border-radius: 0 8px 8px 0;
+  color: var(--text-primary);
+  font-style: italic;
+  font-size: 0.92rem;
+  line-height: 1.8;
+}
+.about-credits {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.9;
+}
+.about-credits .about-credit-row { display: flex; gap: 8px; }
+.about-credits .about-credit-label { color: var(--text-primary); font-weight: 600; min-width: 64px; }
+@media (max-width: 480px) {
+  .about-modal { padding: 36px 22px 24px; }
+  .about-logo { font-size: 2.1rem; }
+}

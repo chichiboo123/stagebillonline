@@ -49,18 +49,45 @@ const translations = {
     'row.works': ' 작품',
     'row.curatorPick': ' 추천',
     'footer.description': '교실에서 시작하는 뮤지컬 수업',
+    'nav.aiCuration': 'AI 큐레이션',
+    'nav.upload': '업로드',
+    'nav.uploadTitle': '새 내용 업로드',
+    'nav.about': '소개',
+    'about.title': 'STAGEBILL 소개',
+    'about.tagline': '교실에서 시작하는 뮤지컬 수업',
+    'upload.title': '업로드',
+    'upload.pwdPrompt': '비밀번호를 입력하세요',
+    'upload.pwdPlaceholder': '비밀번호',
+    'upload.pwdSubmit': '확인',
+    'upload.formTitle': '새 내용 업로드',
+    'upload.formSub': '제출 후 스프레드시트에 자동으로 반영됩니다. (반영까지 1~2분 소요)',
+    'upload.newTab': '새 창에서 열기',
     'ai.title': 'AI 큐레이션',
     'ai.subtitle': '조건을 입력하면 스테이지빌에서 맞춤 작품을 골라드려요.',
-    'ai.grade': '수업 대상 학년',
+    'ai.grade': '대상 선택',
+    'ai.grade.hint': '(중복 선택 가능)',
     'ai.grade.none': '선택 안 함',
-    'ai.keywords': '수업 키워드',
-    'ai.lessonType': '하고 싶은 수업',
+    'ai.keywords': '키워드',
+    'ai.keywords.ph': '예: 환경, 진로, 자존감, 우정...',
+    'ai.lessonType': '하고 싶은 수업/연수',
+    'ai.lessonType.ph': '예: 감상 수업, 토론, 창작 활동, 교사 연수 워크숍...',
     'ai.interests': '관심 작품 / 기타 조건',
+    'ai.interests.opt': '(선택)',
+    'ai.interests.ph': '예: 레미제라블처럼 사회적 메시지가 있는 작품, 노래가 쉬운 작품...',
     'ai.submit': 'AI 큐레이션 받기',
     'ai.loading': 'AI가 스테이지빌을 샅샅이 뒤지고 있어요...',
     'ai.loadingSub': '잠시만 기다려 주세요 ✨',
     'ai.result': 'AI 추천 결과',
     'ai.retry': '다시 검색하기',
+    'ai.export.txt': 'TXT', 'ai.export.txtTitle': '텍스트로 저장',
+    'ai.export.jpg': 'JPG', 'ai.export.jpgTitle': '이미지로 저장',
+    'ai.export.link': '링크', 'ai.export.linkTitle': '공유 링크 복사',
+    'ai.export.copy': '복사', 'ai.export.copyTitle': '텍스트 복사',
+    'ai.meta.target': '대상', 'ai.meta.keywords': '키워드', 'ai.meta.lessonType': '활동', 'ai.meta.interests': '기타',
+    'target.elem12': '초등 1-2학년', 'target.elem34': '초등 3-4학년', 'target.elem56': '초등 5-6학년',
+    'target.mid1': '중학교 1학년', 'target.mid2': '중학교 2학년', 'target.mid3': '중학교 3학년',
+    'target.high1': '고등학교 1학년', 'target.high2': '고등학교 2학년', 'target.high3': '고등학교 3학년',
+    'target.teacher': '교사',
   },
   en: {
     'nav.all': 'All',
@@ -95,18 +122,45 @@ const translations = {
     'row.works': ' Works',
     'row.curatorPick': "'s Picks",
     'footer.description': 'Musical Class Starts in the Classroom',
+    'nav.aiCuration': 'AI Curation',
+    'nav.upload': 'Upload',
+    'nav.uploadTitle': 'Upload new content',
+    'nav.about': 'About',
+    'about.title': 'About STAGEBILL',
+    'about.tagline': 'Musical lessons that start in the classroom',
+    'upload.title': 'Upload',
+    'upload.pwdPrompt': 'Enter password',
+    'upload.pwdPlaceholder': 'Password',
+    'upload.pwdSubmit': 'OK',
+    'upload.formTitle': 'Upload new content',
+    'upload.formSub': 'Submissions are auto-saved to the spreadsheet. (Takes 1-2 min to reflect)',
+    'upload.newTab': 'Open in new tab',
     'ai.title': 'AI Curation',
-    'ai.subtitle': 'Enter your conditions and we\'ll pick the best works from STAGEBILL.',
-    'ai.grade': 'Target Grade',
-    'ai.grade.none': 'Any Grade',
+    'ai.subtitle': 'Tell us your conditions and we\'ll pick the best works from STAGEBILL.',
+    'ai.grade': 'Audience',
+    'ai.grade.hint': '(multiple selection)',
+    'ai.grade.none': 'Any',
     'ai.keywords': 'Keywords',
-    'ai.lessonType': 'Lesson Type',
-    'ai.interests': 'Interests / Other Notes',
+    'ai.keywords.ph': 'e.g., environment, career, self-esteem, friendship...',
+    'ai.lessonType': 'Lesson / Training type',
+    'ai.lessonType.ph': 'e.g., appreciation, discussion, creative activity, teacher workshop...',
+    'ai.interests': 'Works of interest / Other notes',
+    'ai.interests.opt': '(optional)',
+    'ai.interests.ph': 'e.g., works with social messages like Les Misérables, easy-to-sing songs...',
     'ai.submit': 'Get AI Curation',
     'ai.loading': 'AI is searching through STAGEBILL...',
     'ai.loadingSub': 'Just a moment ✨',
     'ai.result': 'AI Recommendations',
     'ai.retry': 'Search Again',
+    'ai.export.txt': 'TXT', 'ai.export.txtTitle': 'Save as text',
+    'ai.export.jpg': 'JPG', 'ai.export.jpgTitle': 'Save as image',
+    'ai.export.link': 'Link', 'ai.export.linkTitle': 'Copy share link',
+    'ai.export.copy': 'Copy', 'ai.export.copyTitle': 'Copy text',
+    'ai.meta.target': 'Audience', 'ai.meta.keywords': 'Keywords', 'ai.meta.lessonType': 'Activity', 'ai.meta.interests': 'Notes',
+    'target.elem12': 'Elementary 1-2', 'target.elem34': 'Elementary 3-4', 'target.elem56': 'Elementary 5-6',
+    'target.mid1': 'Middle School 1', 'target.mid2': 'Middle School 2', 'target.mid3': 'Middle School 3',
+    'target.high1': 'High School 1', 'target.high2': 'High School 2', 'target.high3': 'High School 3',
+    'target.teacher': 'Teacher',
   },
   ja: {
     'nav.all': 'すべて',
@@ -141,18 +195,45 @@ const translations = {
     'row.works': 'の作品',
     'row.curatorPick': 'のおすすめ',
     'footer.description': '教室から始まるミュージカル授業',
+    'nav.aiCuration': 'AIキュレーション',
+    'nav.upload': 'アップロード',
+    'nav.uploadTitle': '新しい内容をアップロード',
+    'nav.about': 'について',
+    'about.title': 'STAGEBILLについて',
+    'about.tagline': '教室から始まるミュージカル授業',
+    'upload.title': 'アップロード',
+    'upload.pwdPrompt': 'パスワードを入力してください',
+    'upload.pwdPlaceholder': 'パスワード',
+    'upload.pwdSubmit': '確認',
+    'upload.formTitle': '新しい内容をアップロード',
+    'upload.formSub': '送信後、スプレッドシートに自動反映されます。(1〜2分かかる場合があります)',
+    'upload.newTab': '新しいタブで開く',
     'ai.title': 'AIキュレーション',
     'ai.subtitle': '条件を入力すると、STAGEBILLからぴったりの作品を選びます。',
-    'ai.grade': '対象学年',
+    'ai.grade': '対象を選択',
+    'ai.grade.hint': '(複数選択可)',
     'ai.grade.none': '指定なし',
-    'ai.keywords': '授業キーワード',
-    'ai.lessonType': 'やりたい授業',
+    'ai.keywords': 'キーワード',
+    'ai.keywords.ph': '例: 環境、進路、自尊心、友情...',
+    'ai.lessonType': 'やりたい授業/研修',
+    'ai.lessonType.ph': '例: 鑑賞授業、討論、創作活動、教員研修ワークショップ...',
     'ai.interests': '気になる作品 / その他',
+    'ai.interests.opt': '(任意)',
+    'ai.interests.ph': '例: レ・ミゼラブルのような社会的メッセージのある作品、歌いやすい作品...',
     'ai.submit': 'AIキュレーションを受ける',
     'ai.loading': 'AIがSTAGEBILLを探しています...',
     'ai.loadingSub': 'しばらくお待ちください ✨',
     'ai.result': 'AIのおすすめ',
     'ai.retry': 'もう一度検索する',
+    'ai.export.txt': 'TXT', 'ai.export.txtTitle': 'テキスト保存',
+    'ai.export.jpg': 'JPG', 'ai.export.jpgTitle': '画像保存',
+    'ai.export.link': 'リンク', 'ai.export.linkTitle': '共有リンクをコピー',
+    'ai.export.copy': 'コピー', 'ai.export.copyTitle': 'テキストコピー',
+    'ai.meta.target': '対象', 'ai.meta.keywords': 'キーワード', 'ai.meta.lessonType': '活動', 'ai.meta.interests': 'その他',
+    'target.elem12': '小学1-2年', 'target.elem34': '小学3-4年', 'target.elem56': '小学5-6年',
+    'target.mid1': '中学1年', 'target.mid2': '中学2年', 'target.mid3': '中学3年',
+    'target.high1': '高校1年', 'target.high2': '高校2年', 'target.high3': '高校3年',
+    'target.teacher': '教員',
   }
 };
 
@@ -327,6 +408,24 @@ function applyI18n() {
     const key = el.getAttribute('data-i18n');
     el.textContent = t(key);
   });
+  // title 속성 (네비 버튼 등)
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    el.setAttribute('title', t(el.getAttribute('data-i18n-title')));
+  });
+  // placeholder 속성 (input/textarea)
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder')));
+  });
+  // 학년/대상 칩의 라벨
+  document.querySelectorAll('[data-target-i18n]').forEach(el => {
+    el.textContent = t(el.getAttribute('data-target-i18n'));
+  });
+  // 소개 모달 내용 (열려있지 않아도 미리 채워둠)
+  renderAboutContent();
+  // AI 큐레이션 결과가 화면에 있으면 다국어 갱신
+  if (currentAICuration && document.getElementById('aiResultStep').style.display !== 'none') {
+    renderAIResults(currentAICuration.recommendations, currentAICuration.query);
+  }
 
   // Update nav links text — all category filters
   const navAll = document.querySelector('.nav-links a[data-filter="all"]');
@@ -462,6 +561,7 @@ function initApp() {
   setupModal();
   setupUpload();
   setupAICuration();
+  setupAbout();
   applyI18n();
 }
 
@@ -1257,6 +1357,7 @@ async function submitAICuration() {
       keywords,
       lessonType,
       interests,
+      lang: currentLang,
     });
     const res  = await fetch(`${DATA_URL}?${params.toString()}`, { redirect: 'follow' });
     const data = await res.json();
@@ -1354,10 +1455,10 @@ function renderAIResults(recommendations, query) {
   if (meta) {
     const parts = [];
     const targets = (query && query.targets) || (query && query.grade ? String(query.grade).split(',').filter(Boolean) : []);
-    if (targets && targets.length) parts.push(`<span class="ai-meta-label">대상</span> ${targets.join(', ')}`);
-    if (query && query.keywords)   parts.push(`<span class="ai-meta-label">키워드</span> ${escapeHtml(query.keywords)}`);
-    if (query && query.lessonType) parts.push(`<span class="ai-meta-label">활동</span> ${escapeHtml(query.lessonType)}`);
-    if (query && query.interests)  parts.push(`<span class="ai-meta-label">기타</span> ${escapeHtml(query.interests)}`);
+    if (targets && targets.length) parts.push(`<span class="ai-meta-label">${t('ai.meta.target')}</span> ${escapeHtml(targets.map(translateTargetValue).join(', '))}`);
+    if (query && query.keywords)   parts.push(`<span class="ai-meta-label">${t('ai.meta.keywords')}</span> ${escapeHtml(query.keywords)}`);
+    if (query && query.lessonType) parts.push(`<span class="ai-meta-label">${t('ai.meta.lessonType')}</span> ${escapeHtml(query.lessonType)}`);
+    if (query && query.interests)  parts.push(`<span class="ai-meta-label">${t('ai.meta.interests')}</span> ${escapeHtml(query.interests)}`);
     meta.innerHTML = parts.join(' · ');
   }
 
@@ -1400,6 +1501,18 @@ function escapeHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
+// 체크박스 value(한국어 원본)를 현재 언어로 변환. 일치 키 없으면 원본 반환
+const TARGET_VALUE_TO_KEY = {
+  '초등 1-2학년': 'target.elem12', '초등 3-4학년': 'target.elem34', '초등 5-6학년': 'target.elem56',
+  '중학교 1학년': 'target.mid1',  '중학교 2학년': 'target.mid2',  '중학교 3학년': 'target.mid3',
+  '고등학교 1학년': 'target.high1', '고등학교 2학년': 'target.high2', '고등학교 3학년': 'target.high3',
+  '교사': 'target.teacher',
+};
+function translateTargetValue(v) {
+  const key = TARGET_VALUE_TO_KEY[v];
+  return key ? t(key) : v;
+}
+
 function showAIError(emoji, title, sub) {
   document.getElementById('aiErrorEmoji').textContent = emoji;
   document.getElementById('aiErrorTitle').textContent = title;
@@ -1414,12 +1527,12 @@ function showAIError(emoji, title, sub) {
 function buildCurationText() {
   if (!currentAICuration) return '';
   const q = currentAICuration.query || {};
-  const lines = ['🎭 STAGEBILL AI 큐레이션 결과', ''];
-  const targets = q.targets && q.targets.length ? q.targets.join(', ') : '';
-  if (targets)      lines.push('▸ 대상:    ' + targets);
-  if (q.keywords)   lines.push('▸ 키워드:  ' + q.keywords);
-  if (q.lessonType) lines.push('▸ 활동:    ' + q.lessonType);
-  if (q.interests)  lines.push('▸ 기타:    ' + q.interests);
+  const lines = ['🎭 STAGEBILL · ' + t('ai.result'), ''];
+  const targets = q.targets && q.targets.length ? q.targets.map(translateTargetValue).join(', ') : '';
+  if (targets)      lines.push('▸ ' + t('ai.meta.target')     + ': ' + targets);
+  if (q.keywords)   lines.push('▸ ' + t('ai.meta.keywords')   + ': ' + q.keywords);
+  if (q.lessonType) lines.push('▸ ' + t('ai.meta.lessonType') + ': ' + q.lessonType);
+  if (q.interests)  lines.push('▸ ' + t('ai.meta.interests')  + ': ' + q.interests);
   lines.push('');
   lines.push('─'.repeat(40));
   lines.push('');
@@ -1520,15 +1633,15 @@ async function exportAICurationJpg() {
 // 화면 캡처 대신 깔끔한 별도 노드를 만들어 캡처 (오버레이/그림자 영향 제거)
 function buildJpgCaptureNode() {
   const q = currentAICuration.query || {};
-  const targets = q.targets && q.targets.length ? q.targets.join(', ') : '';
+  const targets = q.targets && q.targets.length ? q.targets.map(translateTargetValue).join(', ') : '';
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:720px;padding:36px;background:#13111c;color:#fff;font-family:"Noto Sans KR",sans-serif;';
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;width:720px;padding:36px;background:#13111c;color:#fff;font-family:"Noto Sans KR","Noto Sans JP",sans-serif;';
 
   const metaParts = [];
-  if (targets)      metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">대상</span> ${escapeHtml(targets)}</div>`);
-  if (q.keywords)   metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">키워드</span> ${escapeHtml(q.keywords)}</div>`);
-  if (q.lessonType) metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">활동</span> ${escapeHtml(q.lessonType)}</div>`);
-  if (q.interests)  metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">기타</span> ${escapeHtml(q.interests)}</div>`);
+  if (targets)      metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">${t('ai.meta.target')}</span> ${escapeHtml(targets)}</div>`);
+  if (q.keywords)   metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">${t('ai.meta.keywords')}</span> ${escapeHtml(q.keywords)}</div>`);
+  if (q.lessonType) metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">${t('ai.meta.lessonType')}</span> ${escapeHtml(q.lessonType)}</div>`);
+  if (q.interests)  metaParts.push(`<div><span style="color:#a855f7;font-weight:600;">${t('ai.meta.interests')}</span> ${escapeHtml(q.interests)}</div>`);
 
   const cards = currentAICuration.recommendations.map((rec, idx) => {
     const musical = musicals.find(m => String(m.id) === String(rec.id));
@@ -1549,11 +1662,11 @@ function buildJpgCaptureNode() {
   wrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
       <svg viewBox="0 0 24 24" width="24" height="24" fill="#a855f7"><path d="M12 2c0 5.523 4.477 10 10 10-5.523 0-10 4.477-10 10 0-5.523-4.477-10-10-10 5.523 0 10-4.477 10-10z"/></svg>
-      <span style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">STAGEBILL AI 큐레이션</span>
+      <span style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;">STAGEBILL · ${escapeHtml(t('ai.result'))}</span>
     </div>
     ${metaParts.length ? `<div style="font-size:13px;color:#a8a3c4;line-height:1.8;margin-bottom:24px;padding:14px 16px;background:rgba(124,58,237,0.08);border-radius:10px;">${metaParts.join('')}</div>` : ''}
     <div>${cards}</div>
-    <div style="margin-top:24px;text-align:right;font-size:11px;color:#6b6585;">stagebill.chichiboo.link · ${new Date().toLocaleDateString('ko-KR')}</div>
+    <div style="margin-top:24px;text-align:right;font-size:11px;color:#6b6585;">stagebill.chichiboo.link · ${new Date().toLocaleDateString(currentLang === 'ja' ? 'ja-JP' : currentLang === 'en' ? 'en-US' : 'ko-KR')}</div>
   `;
   return wrap;
 }
@@ -1605,6 +1718,78 @@ function tryRenderSharedCuration() {
   };
   renderAIResults(shared.r, shared.q || {});
   openAICurationOverlay();
+}
+
+// ==========================================
+// STAGEBILL 소개
+// ==========================================
+const ABOUT_CONTENT = {
+  ko: {
+    body: [
+      `STAGEBILL은 브로드웨이 공연장에서 관객에게 제공되는 프로그램 북인 'PLAYBILL'에서 영감을 받아 시작된 자료집입니다.`,
+      `PLAYBILL은 공연 주요 정보와 스태프, 출연진, 줄거리 등을 소개하며 공연의 맥락을 풍부하게 이해하도록 돕는 소중한 안내서입니다.`,
+      `이처럼 STAGEBILL은 '교육'과 '뮤지컬'의 의미 있는 만남을 기록하고, 매월 선생님과 함께 교육뮤지컬의 영감을 나누기 위해 만들었습니다.`,
+    ],
+    quote: '교실이라는 작지만 큰 무대 위에서,\n선생님과 학생들이 뮤지컬을 통해\n더 행복한 수업 시간을 만들어가시길 기원합니다.',
+    credits: [
+      { label: '제작',         value: '경기도뮤지컬교육연구회 STAGE' },
+      { label: '기획 및 편집', value: '원치수' },
+    ],
+  },
+  en: {
+    body: [
+      `STAGEBILL is inspired by 'PLAYBILL'—the program book Broadway theaters hand to audiences.`,
+      `PLAYBILL introduces a show's key information, staff, cast, and synopsis, helping audiences understand the work in richer context.`,
+      `In the same spirit, STAGEBILL records meaningful encounters between 'education' and 'musicals,' sharing monthly inspiration for educational musical theatre with teachers.`,
+    ],
+    quote: 'On the small but vast stage that is a classroom,\nwe hope teachers and students\ncreate happier lessons through musicals.',
+    credits: [
+      { label: 'Produced by', value: 'Gyeonggi Musical Education Research Society STAGE' },
+      { label: 'Edited by',   value: 'WON Chisoo' },
+    ],
+  },
+  ja: {
+    body: [
+      `STAGEBILLは、ブロードウェイの劇場で観客に配られるプログラム冊子「PLAYBILL」にインスピレーションを受けて始まった資料集です。`,
+      `PLAYBILLは公演の主要情報、スタッフ、キャスト、あらすじなどを紹介し、公演の文脈を豊かに理解できるよう導く大切な案内書です。`,
+      `STAGEBILLは「教育」と「ミュージカル」の意味ある出会いを記録し、毎月先生方と教育ミュージカルのインスピレーションを分かち合うために作られました。`,
+    ],
+    quote: '教室という小さくても大きな舞台の上で、\n先生方と生徒たちがミュージカルを通して\nより幸せな授業時間を作っていけることを願っています。',
+    credits: [
+      { label: '制作',     value: '京畿道ミュージカル教育研究会 STAGE' },
+      { label: '企画・編集', value: 'ウォン・チス' },
+    ],
+  },
+};
+
+function setupAbout() {
+  document.getElementById('aboutBtn').addEventListener('click', openAbout);
+  document.getElementById('aboutClose').addEventListener('click', closeAbout);
+  document.getElementById('aboutOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('aboutOverlay')) closeAbout();
+  });
+  renderAboutContent();
+}
+function openAbout() {
+  renderAboutContent();
+  document.getElementById('aboutOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeAbout() {
+  document.getElementById('aboutOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+function renderAboutContent() {
+  const body = document.getElementById('aboutBody');
+  const credits = document.getElementById('aboutCredits');
+  if (!body || !credits) return;
+  const c = ABOUT_CONTENT[currentLang] || ABOUT_CONTENT.ko;
+  body.innerHTML =
+    c.body.map(p => `<p>${escapeHtml(p)}</p>`).join('') +
+    `<div class="about-quote">${escapeHtml(c.quote).replace(/\n/g, '<br>')}</div>`;
+  credits.innerHTML = c.credits.map(cr =>
+    `<div class="about-credit-row"><span class="about-credit-label">${escapeHtml(cr.label)}</span><span>${escapeHtml(cr.value)}</span></div>`
+  ).join('');
 }
 
 // ==========================================
