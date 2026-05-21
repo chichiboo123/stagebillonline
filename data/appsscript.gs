@@ -79,6 +79,20 @@ function onFormSubmit(e) {
 // 배포 검증용 — 이 문자열이 ?action=ping 응답에 그대로 나오면 새 코드가 배포된 것
 const SCRIPT_VERSION = '2026-05-21-curation-v2';
 
+// 진단용: Apps Script 에디터에서 함수 선택 → ▶ 실행 → 보기 → 로그
+// "이 프로젝트가 정말 STAGEBILL이 호출하는 그 프로젝트인가?"를 확인할 때 사용
+function checkVersion() {
+  const props = PropertiesService.getScriptProperties();
+  Logger.log('==== STAGEBILL Apps Script 진단 ====');
+  Logger.log('SCRIPT_VERSION: ' + SCRIPT_VERSION);
+  Logger.log('GEMINI_API_KEY 설정 여부: ' + (!!props.getProperty('GEMINI_API_KEY')));
+  Logger.log('메인 시트명: ' + (getMainSheet() ? getMainSheet().getName() : '없음'));
+  Logger.log('스프레드시트 ID: ' + SpreadsheetApp.getActiveSpreadsheet().getId());
+  Logger.log('스프레드시트 URL: ' + SpreadsheetApp.getActiveSpreadsheet().getUrl());
+  Logger.log('현재 배포 URL을 확인하려면: 배포 → 배포 관리 → 활성 배포의 웹앱 URL 비교');
+  Logger.log('app.js의 DATA_URL과 정확히 일치해야 함 (AKfyc...PbiFUzfx_n2Wg)');
+}
+
 // ── 읽기 / AI 큐레이션 라우팅 (앱 → doGet) ──────────────────
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || 'read';
