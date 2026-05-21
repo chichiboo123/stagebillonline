@@ -76,9 +76,20 @@ function onFormSubmit(e) {
   }
 }
 
+// 배포 검증용 — 이 문자열이 ?action=ping 응답에 그대로 나오면 새 코드가 배포된 것
+const SCRIPT_VERSION = '2026-05-21-curation-v2';
+
 // ── 읽기 / AI 큐레이션 라우팅 (앱 → doGet) ──────────────────
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || 'read';
+  if (action === 'ping') {
+    return jsonResponse({
+      ok: true,
+      version: SCRIPT_VERSION,
+      hasGeminiKey: !!PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY'),
+      sheet: (getMainSheet() && getMainSheet().getName()) || null,
+    });
+  }
   if (action === 'curate') return handleAICuration(e.parameter);
   return handleRead();
 }
