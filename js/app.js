@@ -382,10 +382,17 @@ function getLocalizedField(m, fieldKey) {
   return (translated && String(translated).trim()) ? String(translated) : (m[fieldKey] || '');
 }
 
+function toHashtagArray(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  return String(val).split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+}
+
 function getLocalizedHashtags(m) {
-  if (currentLang === 'ko') return m.hashtags || [];
+  if (currentLang === 'ko') return toHashtagArray(m.hashtags);
   const localized = m[`hashtags_${currentLang}`];
-  return (localized && localized.length > 0) ? localized : (m.hashtags || []);
+  const arr = toHashtagArray(localized);
+  return arr.length > 0 ? arr : toHashtagArray(m.hashtags);
 }
 
 // Returns localized recommended numbers.
