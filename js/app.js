@@ -487,7 +487,7 @@ function refreshHeroText(m) {
   const hashtagsEl = document.getElementById('heroHashtags');
   if (hashtagsEl) {
     hashtagsEl.innerHTML = getLocalizedHashtags(m).slice(0, 5).map(h =>
-      `<span class="hashtag" onclick="searchByHashtag('${h}')">${h}</span>`
+      `<span class="hashtag" onclick="searchByHashtag('${h.replace(/'/g, "\\'")}')">${h}</span>`
     ).join('');
   }
 }
@@ -806,7 +806,7 @@ function applyHero(m, withFade) {
     document.getElementById('heroDescription').textContent = getLocalizedField(m, 'description');
     const hashtagsEl = document.getElementById('heroHashtags');
     hashtagsEl.innerHTML = getLocalizedHashtags(m).slice(0, 5).map(h =>
-      `<span class="hashtag" onclick="searchByHashtag('${h}')">${h}</span>`
+      `<span class="hashtag" onclick="searchByHashtag('${h.replace(/'/g, "\\'")}')">${h}</span>`
     ).join('');
     document.getElementById('heroDetailBtn').onclick = () => openModal(m);
     updateHeroNavArrows();
@@ -1047,7 +1047,7 @@ function setupRowNav(row) {
 // ==========================================
 function createCardHTML(m) {
   const hashtags = getLocalizedHashtags(m).slice(0, 3).map(h =>
-    `<span class="hashtag-sm" onclick="event.stopPropagation(); searchByHashtag('${h}')">${h}</span>`
+    `<span class="hashtag-sm" onclick="event.stopPropagation(); searchByHashtag('${h.replace(/'/g, "\\'")}')">${h}</span>`
   ).join('');
 
   const thumbnailInner = m.thumbnail
@@ -1267,7 +1267,7 @@ function openModal(m) {
   // Hashtags
   const hashtagsEl = document.getElementById('modalHashtags');
   hashtagsEl.innerHTML = getLocalizedHashtags(m).map(h =>
-    `<span class="hashtag" onclick="closeModal(); searchByHashtag('${h}')">${h}</span>`
+    `<span class="hashtag" onclick="closeModal(); searchByHashtag('${h.replace(/'/g, "\\'")}')">${h}</span>`
   ).join('');
 
   overlay.classList.add('active');
