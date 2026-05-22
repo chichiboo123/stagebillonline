@@ -1471,7 +1471,7 @@ function formatModelName(model) {
     .join(' ');
 }
 
-// 결과 헤더에 현재 사용 중인 AI 모델을 배터리 표시처럼 작게 노출
+// 결과 헤더에 현재 사용 중인 AI 모델을 작게 노출
 function renderModelBadge(model) {
   const badge = document.getElementById('aiModelBadge');
   if (!badge) return;
@@ -1480,8 +1480,6 @@ function renderModelBadge(model) {
   badge.title = t('ai.model.label') + ': ' + model;
   badge.innerHTML =
     '<span class="ai-model-dot"></span>' +
-    '<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor">' +
-    '<path d="M4 7h13a2 2 0 0 1 2 2v1h2v4h-2v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0 2v6h13V9H4z"/></svg>' +
     '<span>' + escapeHtml(formatModelName(model)) + '</span>';
 }
 
