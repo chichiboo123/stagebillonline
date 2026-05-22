@@ -439,7 +439,7 @@ function applyI18n() {
   renderAboutContent();
   // AI 큐레이션 결과가 화면에 있으면 다국어 갱신
   if (currentAICuration && document.getElementById('aiResultStep').style.display !== 'none') {
-    renderAIResults(currentAICuration.recommendations, currentAICuration.query);
+    renderAIResults(currentAICuration);
   }
 
   // Update nav links text — all category filters
@@ -493,21 +493,90 @@ function refreshHeroText(m) {
 }
 
 // ==========================================
-// Language Switcher
+// Nav Dropdowns (언어 선택 + ⋯ 더보기 메뉴)
 // ==========================================
+const LANG_SHORT = { ko: 'KO', en: 'EN', ja: 'JP' };
+
+// 열려 있는 모든 네비 드롭다운을 닫음
+function closeAllNavDropdowns() {
+  document.querySelectorAll('.lang-dropdown.open, .nav-more.open').forEach(el => {
+    el.classList.remove('open');
+    const trigger = el.querySelector('[aria-expanded]');
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  });
+}
+
+// 드롭다운 컨테이너를 토글 (다른 드롭다운은 닫음)
+function toggleNavDropdown(container) {
+  const willOpen = !container.classList.contains('open');
+  closeAllNavDropdowns();
+  if (willOpen) {
+    container.classList.add('open');
+    const trigger = container.querySelector('[aria-expanded]');
+    if (trigger) trigger.setAttribute('aria-expanded', 'true');
+  }
+}
+
 function setupLangSwitcher() {
-  const buttons = document.querySelectorAll('.lang-btn');
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const lang = btn.dataset.lang;
+  const dropdown   = document.getElementById('langDropdown');
+  const currentBtn = document.getElementById('langCurrentBtn');
+  const menu       = document.getElementById('langMenu');
+  const label      = document.getElementById('langCurrentLabel');
+  const options    = document.querySelectorAll('.lang-option');
+  if (!dropdown || !currentBtn) return;
+
+  function syncActive() {
+    label.textContent = LANG_SHORT[currentLang] || currentLang.toUpperCase();
+    options.forEach(o => o.classList.toggle('active', o.dataset.lang === currentLang));
+  }
+
+  currentBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleNavDropdown(dropdown);
+  });
+  menu.addEventListener('click', (e) => e.stopPropagation());
+
+  options.forEach(opt => {
+    opt.addEventListener('click', () => {
+      const lang = opt.dataset.lang;
+      closeAllNavDropdowns();
       if (lang === currentLang) return;
       currentLang = lang;
-      buttons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      syncActive();
       applyI18n();
     });
   });
+
+  syncActive();
 }
+
+function setupNavMore() {
+  const navMore = document.getElementById('navMore');
+  const moreBtn = document.getElementById('navMoreBtn');
+  const menu    = document.getElementById('navMoreMenu');
+  if (!navMore || !moreBtn) return;
+
+  moreBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleNavDropdown(navMore);
+  });
+  menu.addEventListener('click', (e) => e.stopPropagation());
+
+  const actionMap = { ai: 'aiCurationBtn', upload: 'uploadBtn', about: 'aboutBtn' };
+  document.querySelectorAll('.nav-more-item').forEach(item => {
+    item.addEventListener('click', () => {
+      closeAllNavDropdowns();
+      const target = document.getElementById(actionMap[item.dataset.action]);
+      if (target) target.click();
+    });
+  });
+}
+
+// 바깥 클릭 / ESC 로 드롭다운 닫기
+document.addEventListener('click', closeAllNavDropdowns);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeAllNavDropdowns();
+});
 
 // ==========================================
 // Data Loading
@@ -570,6 +639,7 @@ function initApp() {
   setupNavbar();
   setupSearch();
   setupLangSwitcher();
+  setupNavMore();
   setRandomHero();
   setupHeroAutoRotation();
   renderContentRows('all');

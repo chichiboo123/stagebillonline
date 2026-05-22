@@ -194,38 +194,116 @@ body {
   }
 }
 
-/* ========== Language Switcher ========== */
-.lang-switcher {
+/* ========== Language Dropdown ========== */
+.lang-dropdown {
+  position: relative;
+  flex-shrink: 0;
+}
+.lang-current {
   display: flex;
   align-items: center;
   gap: 4px;
   background: rgba(255,255,255,0.07);
-  border-radius: 20px;
-  padding: 3px;
-}
-
-.lang-btn {
-  background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-family: inherit;
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 4px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 6px 9px 6px 11px;
   border-radius: 16px;
   cursor: pointer;
-  transition: all var(--transition);
-  letter-spacing: 0.5px;
+  transition: background var(--transition), color var(--transition);
 }
+.lang-current:hover { background: rgba(255,255,255,0.13); color: var(--text-primary); }
+.lang-caret { transition: transform var(--transition); flex-shrink: 0; }
+.lang-dropdown.open .lang-caret { transform: rotate(180deg); }
 
-.lang-btn:hover {
+.lang-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 124px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 5px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+  z-index: 1100;
+}
+.lang-dropdown.open .lang-menu { display: block; }
+.lang-option {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-align: left;
+  padding: 9px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.lang-option:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.lang-option.active { background: var(--accent); color: #fff; }
+
+/* ========== Nav Overflow Menu (⋯) ========== */
+.nav-more {
+  display: none;
+  position: relative;
+  flex-shrink: 0;
+}
+.nav-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
   color: var(--text-primary);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 6px;
+  transition: background var(--transition);
 }
-
-.lang-btn.active {
-  background: var(--accent);
-  color: #fff;
+.nav-more-btn:hover { background: rgba(255,255,255,0.1); }
+.nav-more.open .nav-more-btn { background: rgba(255,255,255,0.13); }
+.nav-more-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 168px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 5px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.55);
+  z-index: 1100;
 }
+.nav-more.open .nav-more-menu { display: block; }
+.nav-more-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.nav-more-item:hover { background: rgba(255,255,255,0.08); }
+.nav-more-item svg { flex-shrink: 0; color: var(--accent); }
 
 /* ========== Search ========== */
 .search-container {
@@ -1250,10 +1328,10 @@ body {
     z-index: 3;
   }
 
-  /* Lang switcher */
-  .lang-btn {
-    font-size: 0.68rem;
-    padding: 4px 8px;
+  /* Lang dropdown */
+  .lang-current {
+    font-size: 0.7rem;
+    padding: 5px 7px 5px 9px;
   }
 }
 
@@ -1336,13 +1414,13 @@ body {
     font-size: 0.8rem;
   }
 
-  .lang-switcher {
-    gap: 2px;
+  .lang-current {
+    font-size: 0.66rem;
+    padding: 5px 6px 5px 8px;
   }
 
-  .lang-btn {
-    font-size: 0.65rem;
-    padding: 3px 7px;
+  .nav-right {
+    gap: 6px;
   }
 
   /* Modal on tiny screens */
@@ -1502,21 +1580,9 @@ body {
   .upload-btn { margin-left: 8px; }
 }
 
-/* 모바일: 우하단 FAB */
+/* 모바일: 네비 ⋯ 메뉴로 통합 (개별 버튼 숨김) */
 @media (max-width: 768px) {
-  .upload-btn {
-    position: fixed;
-    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-    right: 16px;
-    z-index: 999;
-    border-radius: 24px;
-    height: 40px;
-    padding: 0 14px;
-    gap: 5px;
-    font-size: 0.78rem;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.45);
-  }
-  .upload-btn span { display: inline; }
+  .upload-btn { display: none; }
 }
 
 /* ── 업로드 오버레이 (전체화면 팝업) ──────────────── */
@@ -1783,19 +1849,7 @@ details.upload-details { margin-top: 4px; }
 }
 
 @media (max-width: 768px) {
-  .ai-btn {
-    position: fixed;
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-    right: 16px;
-    z-index: 999;
-    border-radius: 24px;
-    height: 40px;
-    padding: 0 14px;
-    gap: 5px;
-    font-size: 0.78rem;
-    box-shadow: 0 4px 16px rgba(229,9,20,0.45);
-  }
-  .ai-btn span { display: inline; }
+  .ai-btn { display: none; }
 }
 
 /* ── AI 오버레이 / 모달 ────────────────────────────────────── */
@@ -2229,22 +2283,8 @@ details.upload-details { margin-top: 4px; }
   .about-btn { margin-left: 8px; }
 }
 @media (max-width: 768px) {
-  .about-btn {
-    position: fixed;
-    bottom: calc(134px + env(safe-area-inset-bottom, 0px));
-    right: 16px;
-    z-index: 999;
-    border-radius: 24px;
-    height: 40px;
-    padding: 0 14px;
-    gap: 5px;
-    font-size: 0.78rem;
-    background: rgba(26,26,26,0.92);
-    border-color: rgba(255,255,255,0.22);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-    backdrop-filter: blur(6px);
-  }
-  .about-btn span { display: inline; }
+  .about-btn { display: none; }
+  .nav-more { display: block; }
 }
 
 /* ── 소개 오버레이 / 모달 ─────────────────────────────────── */

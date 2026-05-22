@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260521j">
+  <link rel="stylesheet" href="css/style.css?v=20260521k">
 </head>
 <body>
   <!-- Navigation -->
@@ -19,10 +19,16 @@
     <div class="nav-top">
       <a href="#" class="logo" onclick="resetView()">STAGEBILL</a>
       <div class="nav-right">
-        <div class="lang-switcher" id="langSwitcher">
-          <button class="lang-btn active" data-lang="ko">KO</button>
-          <button class="lang-btn" data-lang="en">EN</button>
-          <button class="lang-btn" data-lang="ja">JP</button>
+        <div class="lang-dropdown" id="langDropdown">
+          <button class="lang-current" id="langCurrentBtn" type="button" aria-haspopup="true" aria-expanded="false">
+            <span id="langCurrentLabel">KO</span>
+            <svg class="lang-caret" viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div class="lang-menu" id="langMenu" role="menu">
+            <button class="lang-option" type="button" data-lang="ko" role="menuitem">한국어</button>
+            <button class="lang-option" type="button" data-lang="en" role="menuitem">English</button>
+            <button class="lang-option" type="button" data-lang="ja" role="menuitem">日本語</button>
+          </div>
         </div>
         <div class="search-container" id="searchContainer">
           <button class="search-btn" id="searchBtn" aria-label="검색">
@@ -30,23 +36,40 @@
           </button>
           <input type="text" class="search-input" id="searchInput" placeholder="작품명, 해시태그, 키워드 검색..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly>
         </div>
+        <div class="nav-more" id="navMore">
+          <button class="nav-more-btn" id="navMoreBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="메뉴">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+          </button>
+          <div class="nav-more-menu" id="navMoreMenu" role="menu">
+            <button class="nav-more-item" type="button" data-action="ai" role="menuitem">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 2c0 5.523 4.477 10 10 10-5.523 0-10 4.477-10 10 0-5.523-4.477-10-10-10 5.523 0 10-4.477 10-10z"/></svg>
+              <span data-i18n="nav.aiCuration">AI 큐레이션</span>
+            </button>
+            <button class="nav-more-item" type="button" data-action="upload" role="menuitem">
+              <svg viewBox="0 0 24 24" width="17" height="17"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              <span data-i18n="nav.upload">업로드</span>
+            </button>
+            <button class="nav-more-item" type="button" data-action="about" role="menuitem">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+              <span data-i18n="nav.about">소개</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
     <!-- Category links row (additional items are built dynamically from data) -->
     <ul class="nav-links" id="navLinks">
       <li><a href="#" class="active" data-filter="all">전체</a></li>
     </ul>
-    <!-- AI 큐레이션 버튼: 업로드 버튼 왼쪽 (데스크톱), 우하단 FAB 업로드 위 (모바일) -->
+    <!-- 데스크톱: navbar 우측 라벨 버튼 / 모바일: 상단 ⋯ 메뉴로 통합 (이 버튼들은 숨김) -->
     <button class="ai-btn" id="aiCurationBtn" data-i18n-title="ai.title">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2c0 5.523 4.477 10 10 10-5.523 0-10 4.477-10 10 0-5.523-4.477-10-10-10 5.523 0 10-4.477 10-10z"/></svg>
       <span data-i18n="nav.aiCuration">AI 큐레이션</span>
     </button>
-    <!-- 업로드 버튼: navbar 우측 끝 (데스크톱), 우하단 FAB (모바일) -->
     <button class="upload-btn" id="uploadBtn" data-i18n-title="nav.uploadTitle">
       <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
       <span data-i18n="nav.upload">업로드</span>
     </button>
-    <!-- STAGEBILL 소개 버튼 -->
     <button class="about-btn" id="aboutBtn" data-i18n-title="about.title">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
       <span data-i18n="nav.about">소개</span>
@@ -313,6 +336,6 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="js/app.js?v=20260521j"></script>
+  <script src="js/app.js?v=20260521k"></script>
 </body>
 </html>
