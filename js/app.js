@@ -79,9 +79,11 @@ const translations = {
     'ai.loadingSub': '잠시만 기다려 주세요 ✨',
     'ai.result': 'AI 추천 결과',
     'ai.external': '이런 작품도 있어요',
-    'ai.external.sub': '스테이지빌에는 없지만 입력하신 조건과 관련된 작품이에요.',
+    'ai.external.sub': '스테이지빌에는 없지만 입력하신 조건과 관련된 작품이에요. 카드를 누르면 구글에서 검색돼요.',
     'ai.external.kr': '한국',
     'ai.external.intl': '해외',
+    'ai.external.searchPrefix': '뮤지컬',
+    'ai.external.searchHint': '구글 검색',
     'ai.model.label': 'AI 모델',
     'ai.retry': '다시 검색하기',
     'ai.export.txt': 'TXT', 'ai.export.txtTitle': '텍스트로 저장',
@@ -157,9 +159,11 @@ const translations = {
     'ai.loadingSub': 'Just a moment ✨',
     'ai.result': 'AI Recommendations',
     'ai.external': 'You Might Also Like',
-    'ai.external.sub': 'Not in STAGEBILL, but related to the conditions you entered.',
+    'ai.external.sub': 'Not in STAGEBILL, but related to the conditions you entered. Tap a card to search on Google.',
     'ai.external.kr': 'Korea',
     'ai.external.intl': 'International',
+    'ai.external.searchPrefix': 'musical',
+    'ai.external.searchHint': 'Google Search',
     'ai.model.label': 'AI Model',
     'ai.retry': 'Search Again',
     'ai.export.txt': 'TXT', 'ai.export.txtTitle': 'Save as text',
@@ -235,9 +239,11 @@ const translations = {
     'ai.loadingSub': 'しばらくお待ちください ✨',
     'ai.result': 'AIのおすすめ',
     'ai.external': 'こんな作品もあります',
-    'ai.external.sub': 'STAGEBILLにはありませんが、入力された条件に関連する作品です。',
+    'ai.external.sub': 'STAGEBILLにはありませんが、入力された条件に関連する作品です。カードをタップするとGoogleで検索できます。',
     'ai.external.kr': '韓国',
     'ai.external.intl': '海外',
+    'ai.external.searchPrefix': 'ミュージカル',
+    'ai.external.searchHint': 'Google検索',
     'ai.model.label': 'AIモデル',
     'ai.retry': 'もう一度検索する',
     'ai.export.txt': 'TXT', 'ai.export.txtTitle': 'テキスト保存',
@@ -1572,16 +1578,37 @@ function renderExternalList(external) {
     const isKr = String(item.origin || '').toUpperCase() === 'KR';
     const originLabel = isKr ? t('ai.external.kr') : t('ai.external.intl');
     const card = document.createElement('div');
-    card.className = 'ai-external-card';
+    card.className = 'ai-external-card ai-external-card-clickable';
+    card.setAttribute('role', 'link');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('title', t('ai.external.searchHint'));
     card.innerHTML = `
       <div class="ai-external-card-top">
         <span class="ai-external-card-title">${escapeHtml(item.title || '')}</span>
         <span class="ai-external-origin ${isKr ? 'origin-kr' : 'origin-intl'}">${escapeHtml(originLabel)}</span>
       </div>
       <p class="ai-external-card-reason">${escapeHtml(item.reason || '')}</p>
+      <span class="ai-external-search-hint">
+        <svg viewBox="0 0 24 24" width="13" height="13"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <span>${escapeHtml(t('ai.external.searchHint'))}</span>
+      </span>
     `;
+    const openSearch = () => openExternalSearch(item.title);
+    card.addEventListener('click', openSearch);
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSearch(); }
+    });
     list.appendChild(card);
   });
+}
+
+// '이런 작품도 있어요' 카드 클릭 → 새 탭에서 구글 검색 ('뮤지컬 작품명')
+function openExternalSearch(title) {
+  const name = String(title || '').trim();
+  if (!name) return;
+  const query = `${t('ai.external.searchPrefix')} ${name}`.trim();
+  const url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 function renderAIResults(curation) {
