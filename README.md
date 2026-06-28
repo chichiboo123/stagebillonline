@@ -11,15 +11,19 @@
 ## 주요 기능
 
 ### 1. 큐레이션 카탈로그
-- Google Sheets에 등록된 작품을 카테고리별 행(行) 레이아웃으로 탐색
+- Google Sheets에 등록된 작품을 카테고리별 행(行) 레이아웃으로 탐색 (Netflix 스타일 가로 스크롤)
+- 상단 히어로 배너: 추천작 자동 슬라이드, 이전/다음 이동, **랜덤 추천** 버튼
 - 카테고리 필터, 검색(작품명·해시태그·키워드), 다국어 UI(한·영·일)
-- 작품 상세: 소개, 추천 넘버, 수업 아이디어 노트, 참고 영상(YouTube 임베드), 참고자료
+- 작품 상세: 소개, 추천 넘버, 수업 아이디어 노트, 참고 영상(YouTube 임베드), 참고자료, 해시태그
+- **같은 작품 다른 내용**: 제목이 같고 카테고리가 다른 버전이 있으면 상세 화면에서 서로 전환
 
 ### 2. AI 큐레이션 (Gemini)
 선생님 조건에 맞춰 Gemini가 STAGEBILL 데이터에서 작품을 추천합니다.
 
-- **다중 대상 선택**: 학년 9개 + **교사**까지 동시에 선택 가능 — 학생 수업뿐 아니라 교사 연수 설계에도 활용
+- **다중 대상 선택**: 학년 9개(초1-2 ~ 고3) + **교사**까지 동시에 선택 가능 — 학생 수업뿐 아니라 교사 연수 설계에도 활용
+- **조건 입력**: 키워드 · 하고 싶은 수업/연수 유형 · 관심 작품/기타 조건(선택)
 - **출력 개수 제한 없음**: 조건에 정말 맞는 작품만, 많으면 많은 대로 / 적으면 적은 대로
+- **이런 작품도 있어요**: STAGEBILL에 없더라도 입력 조건과 관련된 실제 뮤지컬 3~5개를 추가 추천 (국내 창작/라이선스 + 해외 작품 혼합, `KR`/`INTL` 구분)
 - **다국어 응답**: UI 언어에 따라 추천 이유를 한·영·일 중 선택 언어로 자동 생성
 - **모델 자동 선택**: Gemini ListModels API로 사용 가능한 모델 실시간 조회 → 우선순위(flash-latest → 3.x → 2.5 → 2.0) 순으로 폴백. 모델 deprecation에 자동 대응
 - **결과 내보내기 4종**
@@ -60,6 +64,26 @@
 - 데이터: Google Sheets (Apps Script `doGet`로 JSON 노출)
 - AI: Apps Script가 Gemini API 프록시 역할(브라우저에 API 키 노출 안 함)
 - 업로드: Google Forms → Apps Script `onFormSubmit` 트리거
+
+---
+
+## 프로젝트 구조
+
+```
+stagebillonline/
+├── index.html              # 단일 페이지 마크업 (네비/히어로/모달/AI·업로드·소개 오버레이)
+├── css/style.css           # 전체 스타일 (반응형, 카테고리 색상, 모달, AI 카드 등)
+├── js/app.js               # 앱 로직 (데이터 로딩·검색·필터·모달·AI 큐레이션·공유링크·다국어)
+├── data/
+│   ├── appsscript.gs       # Google Apps Script (doGet/doPost·읽기·Gemini 프록시·Form 트리거)
+│   ├── sample_template.csv # 스프레드시트 헤더/입력 예시
+│   ├── convert_csv.py      # CSV → 시트 입력 형식 변환 보조 스크립트
+│   └── musicals.json       # (미사용/플레이스홀더) 실데이터는 Google Sheets에서 로드
+├── CNAME                   # GitHub Pages 커스텀 도메인 (stagebill.chichiboo.link)
+└── favicon.svg
+```
+
+> 📘 선생님용 사용 안내서는 [`TEACHER_GUIDE.md`](TEACHER_GUIDE.md)를 참고하세요.
 
 ---
 
@@ -105,7 +129,8 @@ npx serve .
 1. Google Form 만들기. 질문 제목을 **시트 헤더와 동일하게** 작성 (대소문자 포함)
 2. 폼 응답 → 스프레드시트 연결(기존 시트 선택)
 3. Apps Script에서 `setupFormTrigger()` ▶ 실행
-4. 폼의 **사전 작성된 응답 받기** URL을 `js/app.js`의 `UPLOAD_FORM_BASE`로 설정 (있다면)
+4. 폼 공유 URL을 `js/app.js`의 `UPLOAD_FORM_BASE`로 설정 (모달에 `?embedded=true`로 임베드됨)
+5. 업로드 모달 비밀번호는 `js/app.js`의 `UPLOAD_PASSWORD` 상수로 변경 (기본: `stage`)
 
 ### D. Apps Script 재배포 (코드 수정 후)
 
@@ -130,7 +155,7 @@ npx serve .
 | `id` | 자동 | 고유 ID (Form 제출 시 자동 채번) |
 | `title` | ✅ | 작품명 (한국어, 필수) |
 | `title_en` / `title_ja` |  | 영문/일문 작품명 |
-| `category` | ✅ | 카테고리 (예: 일상, 힐링, 과학, 가족, 진로, 성장, 결실, 컬러 …) |
+| `category` | ✅ | 카테고리 (예: 일상, 힐링, 과학, 가족, 진로, 성장, 결실, 컬러, 인성 …) |
 | `curator` |  | 큐레이터명 |
 | `curationYear` |  | 큐레이션 연도 |
 | `description` / `_en` / `_ja` |  | 작품 소개 |
