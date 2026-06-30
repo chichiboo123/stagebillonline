@@ -987,7 +987,7 @@ function createStatsBar() {
   bar.className = 'stats-bar fade-in';
   bar.innerHTML = `
     <div class="stat-item">
-      <span class="stat-icon">🎭</span>
+      <svg class="stat-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2,16.5C2,19.54,4.46,22,7.5,22s5.5-2.46,5.5-5.5V10H2V16.5z M7.5,18.5C6.12,18.5,5,17.83,5,17h5C10,17.83,8.88,18.5,7.5,18.5z M10,13c0.55,0,1,0.45,1,1c0,0.55-0.45,1-1,1s-1-0.45-1-1C9,13.45,9.45,13,10,13z M5,13c0.55,0,1,0.45,1,1c0,0.55-0.45,1-1,1s-1-0.45-1-1C4,13.45,4.45,13,5,13z"/><path d="M11,3v6h3v2.5c0-0.83,1.12-1.5,2.5-1.5c1.38,0,2.5,0.67,2.5,1.5h-5V14v0.39c0.75,0.38,1.6,0.61,2.5,0.61c3.04,0,5.5-2.46,5.5-5.5V3H11z M14,8.08c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C15,7.64,14.55,8.08,14,8.08z M19,8.08c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C20,7.64,19.55,8.08,19,8.08z"/></svg>
       <span class="stat-text">
         <span class="stat-label">${t('stats.works')}</span>
         <span class="stat-value"><span class="stat-num" data-count="${workCount}">0</span>${unit}</span>
@@ -995,7 +995,7 @@ function createStatsBar() {
     </div>
     <span class="stat-divider" aria-hidden="true"></span>
     <div class="stat-item">
-      <span class="stat-icon">🎬</span>
+      <svg class="stat-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
       <span class="stat-text">
         <span class="stat-label">${t('stats.contents')}</span>
         <span class="stat-value"><span class="stat-num" data-count="${contentCount}">0</span>${unit}</span>

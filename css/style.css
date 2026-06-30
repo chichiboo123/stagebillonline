@@ -557,8 +557,10 @@ body {
 }
 
 .stat-icon {
-  font-size: 1.55rem;
-  line-height: 1;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  color: var(--accent);
 }
 
 .stat-text {
@@ -596,7 +598,7 @@ body {
     padding: 11px 18px;
     margin-bottom: 22px;
   }
-  .stat-icon { font-size: 1.3rem; }
+  .stat-icon { width: 22px; height: 22px; }
   .stat-item { gap: 9px; }
   .stat-value { font-size: 1.2rem; }
   .stat-label { font-size: 0.68rem; }
