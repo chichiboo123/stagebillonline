@@ -48,6 +48,9 @@ const translations = {
     'row.browseOthers': '다른 카테고리도 둘러보세요',
     'row.works': ' 작품',
     'row.curatorPick': ' 추천',
+    'stats.works': '게시 작품',
+    'stats.contents': '콘텐츠',
+    'stats.unit': '개',
     'footer.description': '교실에서 시작하는 뮤지컬 수업',
     'nav.aiCuration': 'AI 큐레이션',
     'nav.upload': '업로드',
@@ -128,6 +131,9 @@ const translations = {
     'row.browseOthers': 'Browse Other Categories',
     'row.works': ' Works',
     'row.curatorPick': "'s Picks",
+    'stats.works': 'Works',
+    'stats.contents': 'Contents',
+    'stats.unit': '',
     'footer.description': 'Musical Class Starts in the Classroom',
     'nav.aiCuration': 'AI Curation',
     'nav.upload': 'Upload',
@@ -208,6 +214,9 @@ const translations = {
     'row.browseOthers': '他のカテゴリも見てみよう',
     'row.works': 'の作品',
     'row.curatorPick': 'のおすすめ',
+    'stats.works': '作品',
+    'stats.contents': 'コンテンツ',
+    'stats.unit': '件',
     'footer.description': '教室から始まるミュージカル授業',
     'nav.aiCuration': 'AIキュレーション',
     'nav.upload': 'アップロード',
@@ -956,6 +965,62 @@ function resetView() {
 // ==========================================
 // Content Rows
 // ==========================================
+// ==========================================
+// Catalog Stats (게시 작품 수 / 콘텐츠 수)
+// ==========================================
+let statsAnimated = false;
+
+// '작품' = 고유 제목 수, '콘텐츠' = 제목이 있는 전체 항목 수
+function computeCatalogStats() {
+  const withTitle = musicals.filter(m => m && m.title);
+  const workCount = new Set(withTitle.map(m => m.title)).size;
+  const contentCount = withTitle.length;
+  return { workCount, contentCount };
+}
+
+function createStatsBar() {
+  const { workCount, contentCount } = computeCatalogStats();
+  // 단위는 빈 문자열(영어)도 유효하므로 t()의 falsy 폴백을 피해 직접 조회
+  const langPack = translations[currentLang] || translations['ko'];
+  const unit = (langPack['stats.unit'] != null) ? langPack['stats.unit'] : (translations['ko']['stats.unit'] || '');
+  const bar = document.createElement('div');
+  bar.className = 'stats-bar fade-in';
+  bar.innerHTML = `
+    <div class="stat-item">
+      <span class="stat-icon">🎭</span>
+      <span class="stat-text">
+        <span class="stat-label">${t('stats.works')}</span>
+        <span class="stat-value"><span class="stat-num" data-count="${workCount}">0</span>${unit}</span>
+      </span>
+    </div>
+    <span class="stat-divider" aria-hidden="true"></span>
+    <div class="stat-item">
+      <span class="stat-icon">🎬</span>
+      <span class="stat-text">
+        <span class="stat-label">${t('stats.contents')}</span>
+        <span class="stat-value"><span class="stat-num" data-count="${contentCount}">0</span>${unit}</span>
+      </span>
+    </div>
+  `;
+  return bar;
+}
+
+// 최초 1회만 카운트업 애니메이션, 이후(언어 전환 등)에는 즉시 표시
+function animateStatNums(container) {
+  container.querySelectorAll('.stat-num').forEach(el => {
+    const target = parseInt(el.dataset.count, 10) || 0;
+    if (statsAnimated || target === 0) { el.textContent = target; return; }
+    const dur = 900, start = performance.now();
+    (function step(now) {
+      const p = Math.min((now - start) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(eased * target);
+      if (p < 1) requestAnimationFrame(step);
+    })(start);
+  });
+  statsAnimated = true;
+}
+
 function renderContentRows(filter) {
   const area = document.getElementById('contentArea');
   area.innerHTML = '';
@@ -964,6 +1029,11 @@ function renderContentRows(filter) {
   let filtered = filter === 'all' ? musicals : musicals.filter(m => m.category === filter);
 
   if (filter === 'all') {
+    // 게시 현황 — 첫 페이지 상단에 작품/콘텐츠 카운트 표시
+    const statsBar = createStatsBar();
+    area.appendChild(statsBar);
+    animateStatNums(statsBar);
+
     // "Today's Pick" row — only musicals with actual content
     const validMusicals = musicals.filter(m => m.title && m.description);
     if (validMusicals.length > 0) {

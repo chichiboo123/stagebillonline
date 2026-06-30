@@ -535,6 +535,74 @@ body {
   padding-bottom: 60px;
 }
 
+/* ── Catalog stats (게시 작품 수 / 콘텐츠 수) ── */
+.stats-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 22px;
+  margin: 0 4% 28px;
+  padding: 13px 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-icon {
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.stat-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.stat-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 600px) {
+  .stats-bar {
+    gap: 16px;
+    padding: 11px 18px;
+    margin-bottom: 22px;
+  }
+  .stat-icon { font-size: 1.3rem; }
+  .stat-item { gap: 9px; }
+  .stat-value { font-size: 1.2rem; }
+  .stat-label { font-size: 0.68rem; }
+  .stat-divider { height: 30px; }
+}
+
 .content-row {
   margin-bottom: 40px;
   padding: 0 4%;
