@@ -77,7 +77,7 @@ function onFormSubmit(e) {
 }
 
 // 배포 검증용 — 이 문자열이 ?action=ping 응답에 그대로 나오면 새 코드가 배포된 것
-const SCRIPT_VERSION = '2026-05-21-curation-v7-external';
+const SCRIPT_VERSION = '2026-07-01-curation-v8-perf';
 
 // 진단용: Apps Script 에디터에서 함수 선택 → ▶ 실행 → 보기 → 로그
 // "이 프로젝트가 정말 STAGEBILL이 호출하는 그 프로젝트인가?"를 확인할 때 사용
@@ -138,6 +138,31 @@ const MODEL_PRIORITY = [
   /^gemini-.*-pro[^-]*$/,   // pro 계열
 ];
 
+// 랭킹된 모델 목록 캐시 (ListModels 호출은 느려서 매 요청마다 하면 지연이 큼)
+// CacheService에 6시간 저장 → 큐레이션 요청의 핫패스에서 네트워크 왕복 1회 제거
+const MODEL_CACHE_KEY = 'stagebill_ranked_models_v1';
+const MODEL_CACHE_TTL = 21600; // 6시간(초)
+
+function getRankedModels(apiKey) {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get(MODEL_CACHE_KEY);
+  if (cached) {
+    try {
+      const models = JSON.parse(cached);
+      if (Array.isArray(models) && models.length) {
+        return { models: models, cached: true };
+      }
+    } catch (_) { /* 캐시 파손 시 무시하고 재조회 */ }
+  }
+  const result = listGenerateContentModels(apiKey);
+  if (!result.error && result.models.length) {
+    try {
+      cache.put(MODEL_CACHE_KEY, JSON.stringify(result.models), MODEL_CACHE_TTL);
+    } catch (_) { /* 캐시 저장 실패는 무시 (기능에는 영향 없음) */ }
+  }
+  return result;
+}
+
 // 사용 가능한 generateContent 지원 모델을 우선순위대로 정렬해서 반환
 function listGenerateContentModels(apiKey) {
   try {
@@ -187,6 +212,16 @@ function handleAICuration(params) {
     const interests  = String(params.interests  || '').trim();
     const lang       = String(params.lang       || 'ko').trim();
 
+    // 동일 조건의 이전 결과가 캐시에 있으면 즉시 반환 (시트 읽기·Gemini 호출 없이)
+    const resultCache = CacheService.getScriptCache();
+    const cacheKey = curationCacheKey(grade, keywords, lessonType, interests, lang);
+    const cachedResult = resultCache.get(cacheKey);
+    if (cachedResult) {
+      return ContentService
+        .createTextOutput(cachedResult)
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     const sheet = getMainSheet();
     const rows  = sheet.getDataRange().getValues();
     if (rows.length < 2) return jsonResponse({ error: 'NO_DATA' });
@@ -211,8 +246,8 @@ function handleAICuration(params) {
 
     const prompt = buildCurationPrompt(grade, keywords, lessonType, interests, musicalList, lang);
 
-    // 동적 모델 조회 (ListModels API)
-    const listResult = listGenerateContentModels(apiKey);
+    // 동적 모델 조회 (ListModels API) — 결과는 6시간 캐시하여 핫패스에서 네트워크 왕복 제거
+    const listResult = getRankedModels(apiKey);
     if (listResult.error) {
       return jsonResponse({
         error: 'LIST_MODELS_FAILED',
@@ -234,11 +269,16 @@ function handleAICuration(params) {
       if (result.invalidKey)    return jsonResponse({ error: 'INVALID_KEY', attempts: attempts });
       if (result.quotaExceeded) continue;
       if (result.error)         continue;
-      return jsonResponse({
+      const payload = JSON.stringify({
         recommendations: result.recommendations,
         external: result.external || [],
         model: model,
       });
+      // 성공 결과를 30분 캐시 → 동일 조건 재요청 시 Gemini 재호출 없이 즉시 응답
+      try { resultCache.put(cacheKey, payload, 1800); } catch (_) {}
+      return ContentService
+        .createTextOutput(payload)
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     const last = attempts[attempts.length - 1] || {};
@@ -286,9 +326,9 @@ ${targetLine}
 ${JSON.stringify(musicals)}
 
 위 데이터에서 조건에 적합한 작품을 선별하여 추천해주세요.
-- 개수 제한 없음: 조건에 정말로 맞는 작품만 추천하세요. 적합도가 높은 작품이 많으면 10개 이상도 가능하고, 적으면 1-2개여도 됩니다. 억지로 채우지 마세요.
+- 적합도가 높은 작품 위주로 최대 8개까지 추천하세요. 조건에 정말로 맞는 작품만 고르고, 적으면 1-2개여도 됩니다. 억지로 채우지 마세요.
 - 선택 기준: 대상 적합성, 키워드 관련성, 수업/연수 활용도, 아이디어 노트의 풍부함.
-- 추천 이유에는 해당 대상(학생/교사)에게 왜 적합한지 구체적으로 적어주세요.
+- 추천 이유(reason)는 해당 대상(학생/교사)에게 왜 적합한지 2문장 이내로 간결하게 적어주세요.
 
 [추가 추천 — '이런 작품도 있어요']
 위 스테이지빌 데이터에 없는 작품 중에서도, 사용자의 키워드·활동·관심 작품 조건과 관련 있는 뮤지컬을 3~5개 추천해주세요.
@@ -315,7 +355,9 @@ function callGemini(apiKey, model, prompt) {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 8192,
+          // 출력 토큰 수가 LLM 지연을 좌우함. 데이터셋 규모(수십 개)와 간결한 reason 기준
+          // 실제 출력은 ~2K 토큰 이내라 4096이면 잘림 없이 충분하며 최악 지연을 절반으로 줄임
+          maxOutputTokens: 4096,
           responseMimeType: 'application/json',
         },
       }),
@@ -378,6 +420,14 @@ function handleRead() {
   } catch (err) {
     return jsonResponse({ error: err.message });
   }
+}
+
+// 큐레이션 결과 캐시 키 (조건 조합을 짧은 해시로 변환 — CacheService 키 길이 제한 대응)
+function curationCacheKey(grade, keywords, lessonType, interests, lang) {
+  const raw = [grade, keywords, lessonType, interests, lang].join('\x1f');
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, raw, Utilities.Charset.UTF_8);
+  const hex = bytes.map(b => ('0' + (b & 0xff).toString(16)).slice(-2)).join('');
+  return 'stagebill_curate_v1_' + hex;
 }
 
 function jsonResponse(obj) {

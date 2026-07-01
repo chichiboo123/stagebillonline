@@ -1477,6 +1477,18 @@ function openAICuration() {
   }
   resetAICuration();
   openAICurationOverlay();
+  // 오버레이가 열리는 동안(사용자가 폼 작성 중) Apps Script 컨테이너를 미리 깨워 둔다.
+  // 콜드 스타트를 실제 큐레이션 요청의 임계 경로에서 제거하기 위한 워밍업.
+  warmUpCuration();
+}
+
+// 큐레이션 백엔드 워밍업 (콜드 스타트 완화). 실패해도 조용히 무시.
+let curationWarmedAt = 0;
+function warmUpCuration() {
+  const now = Date.now();
+  if (now - curationWarmedAt < 60000) return; // 1분 내 중복 워밍업 방지
+  curationWarmedAt = now;
+  fetch(`${DATA_URL}?action=ping`, { redirect: 'follow' }).catch(() => {});
 }
 
 function closeAICuration() {
@@ -1527,9 +1539,10 @@ async function submitAICuration() {
       interests,
       lang: currentLang,
     });
+    const startedAt = performance.now();
     const res  = await fetch(`${DATA_URL}?${params.toString()}`, { redirect: 'follow' });
     const data = await res.json();
-    console.log('[STAGEBILL AI] 응답:', data);
+    console.log(`[STAGEBILL AI] 응답 (${Math.round(performance.now() - startedAt)}ms):`, data);
 
     if (data.error === 'QUOTA_EXCEEDED') {
       showAIError(
