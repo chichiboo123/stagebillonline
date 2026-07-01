@@ -70,6 +70,8 @@ function onFormSubmit(e) {
     }
 
     mainSheet.appendRow(newRow);
+    // 새 데이터가 들어왔으므로 큐레이션용 압축 목록 캐시를 무효화
+    try { CacheService.getScriptCache().remove(MUSICAL_LIST_CACHE_KEY); } catch (_) {}
     Logger.log('폼 응답 추가 완료: ' + (newRow[headers.indexOf('title')] || '(제목 없음)'));
   } catch (err) {
     Logger.log('onFormSubmit 오류: ' + err.message);
@@ -77,7 +79,7 @@ function onFormSubmit(e) {
 }
 
 // 배포 검증용 — 이 문자열이 ?action=ping 응답에 그대로 나오면 새 코드가 배포된 것
-const SCRIPT_VERSION = '2026-07-01-curation-v8-perf';
+const SCRIPT_VERSION = '2026-07-01-curation-v9-min-calls';
 
 // 진단용: Apps Script 에디터에서 함수 선택 → ▶ 실행 → 보기 → 로그
 // "이 프로젝트가 정말 STAGEBILL이 호출하는 그 프로젝트인가?"를 확인할 때 사용
@@ -143,6 +145,22 @@ const MODEL_PRIORITY = [
 const MODEL_CACHE_KEY = 'stagebill_ranked_models_v1';
 const MODEL_CACHE_TTL = 21600; // 6시간(초)
 
+// 직전에 성공한 모델을 기억해 두고 다음 요청에서 가장 먼저 시도
+// → 랭킹 1위 모델이 할당량 초과 상태여도 매번 헛 호출을 반복하지 않음
+const LAST_GOOD_MODEL_KEY = 'stagebill_last_good_model_v1';
+// 429/오류를 낸 모델은 10분간 후순위로 미룸 (쿨다운)
+const MODEL_COOLDOWN_PREFIX = 'stagebill_model_cd_';
+const MODEL_COOLDOWN_TTL = 600; // 10분(초)
+// 한 요청에서 시도하는 최대 모델 수 — 실패 시 헛되이 소모되는 호출을 제한
+const MAX_MODEL_ATTEMPTS = 3;
+
+// 큐레이션용 압축 작품 목록 캐시 (시트 읽기는 요청마다 1~3초 소요)
+const MUSICAL_LIST_CACHE_KEY = 'stagebill_compact_list_v1';
+const MUSICAL_LIST_CACHE_TTL = 1800; // 30분(초) — 폼 제출 시 즉시 무효화됨
+
+// 큐레이션 결과 캐시 TTL — 데이터가 자주 바뀌지 않으므로 CacheService 최대치 사용
+const CURATION_RESULT_TTL = 21600; // 6시간(초)
+
 function getRankedModels(apiKey) {
   const cache = CacheService.getScriptCache();
   const cached = cache.get(MODEL_CACHE_KEY);
@@ -200,6 +218,55 @@ function listGenerateContentModels(apiKey) {
   }
 }
 
+// 시도 순서 결정: 직전 성공 모델 우선, 쿨다운 중인 모델은 후순위
+function orderModelsForAttempt(rankedModels, cache) {
+  let models = rankedModels.slice();
+  const lastGood = cache.get(LAST_GOOD_MODEL_KEY);
+  if (lastGood && models.indexOf(lastGood) >= 0) {
+    models = [lastGood].concat(models.filter(m => m !== lastGood));
+  }
+  const hot  = [];
+  const cold = [];
+  models.forEach(m => {
+    (cache.get(MODEL_COOLDOWN_PREFIX + m) ? cold : hot).push(m);
+  });
+  return hot.concat(cold); // 전부 쿨다운이어도 시도는 함 (완전 차단 방지)
+}
+
+// 큐레이션 프롬프트용 압축 작품 목록 — 시트 읽기(1~3초)를 30분 캐시로 대체
+function getCompactMusicalList(cache) {
+  const cached = cache.get(MUSICAL_LIST_CACHE_KEY);
+  if (cached) {
+    try {
+      const list = JSON.parse(cached);
+      if (Array.isArray(list) && list.length) return list;
+    } catch (_) { /* 캐시 파손 시 무시하고 재조회 */ }
+  }
+  const sheet = getMainSheet();
+  const rows  = sheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
+  const headers = rows[0];
+  const list = rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = row[i]; });
+    return obj;
+  }).filter(m => m.title).map(m => ({
+    id:          String(m.id    || ''),
+    title:       String(m.title || ''),
+    title_en:    String(m.title_en || ''),
+    title_ja:    String(m.title_ja || ''),
+    category:    String(m.category   || ''),
+    description: String(m.description|| '').substring(0, 150),
+    ideaNotes:   String(m.ideaNotes  || '').substring(0, 150),
+    hashtags:    Array.isArray(m.hashtags) ? m.hashtags.join(', ') : String(m.hashtags || ''),
+    number1:     String(m.number1_title || ''),
+    number2:     String(m.number2_title || ''),
+  }));
+  // CacheService 값 제한(100KB) 초과 등으로 저장 실패해도 기능에는 영향 없음
+  try { cache.put(MUSICAL_LIST_CACHE_KEY, JSON.stringify(list), MUSICAL_LIST_CACHE_TTL); } catch (_) {}
+  return list;
+}
+
 // params: e.parameter (GET) 또는 JSON body (POST)
 function handleAICuration(params) {
   try {
@@ -222,27 +289,8 @@ function handleAICuration(params) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    const sheet = getMainSheet();
-    const rows  = sheet.getDataRange().getValues();
-    if (rows.length < 2) return jsonResponse({ error: 'NO_DATA' });
-    const headers = rows[0];
-
-    const musicalList = rows.slice(1).map(row => {
-      const obj = {};
-      headers.forEach((h, i) => { obj[h] = row[i]; });
-      return obj;
-    }).filter(m => m.title).map(m => ({
-      id:          String(m.id    || ''),
-      title:       String(m.title || ''),
-      title_en:    String(m.title_en || ''),
-      title_ja:    String(m.title_ja || ''),
-      category:    String(m.category   || ''),
-      description: String(m.description|| '').substring(0, 150),
-      ideaNotes:   String(m.ideaNotes  || '').substring(0, 150),
-      hashtags:    Array.isArray(m.hashtags) ? m.hashtags.join(', ') : String(m.hashtags || ''),
-      number1:     String(m.number1_title || ''),
-      number2:     String(m.number2_title || ''),
-    }));
+    const musicalList = getCompactMusicalList(resultCache);
+    if (!musicalList.length) return jsonResponse({ error: 'NO_DATA' });
 
     const prompt = buildCurationPrompt(grade, keywords, lessonType, interests, musicalList, lang);
 
@@ -259,23 +307,32 @@ function handleAICuration(params) {
       return jsonResponse({ error: 'NO_AVAILABLE_MODELS' });
     }
 
-    // 상위 5개만 시도 (Apps Script 6분 제한 회피)
-    const modelsToTry = listResult.models.slice(0, 5);
+    // 시도 순서 최적화:
+    //   1) 직전에 성공한 모델을 맨 앞으로 (거의 항상 1회 호출로 끝남)
+    //   2) 최근 실패(쿨다운 중)한 모델은 뒤로 미룸 → 헛 호출 방지
+    const modelsToTry = orderModelsForAttempt(listResult.models, resultCache)
+      .slice(0, MAX_MODEL_ATTEMPTS);
     const attempts = [];
     for (const model of modelsToTry) {
       const result = callGemini(apiKey, model, prompt);
       attempts.push({ model: model, status: result.status, snippet: result.snippet });
       Logger.log('[Gemini] ' + model + ' → status=' + result.status + ' / ' + (result.snippet || ''));
       if (result.invalidKey)    return jsonResponse({ error: 'INVALID_KEY', attempts: attempts });
-      if (result.quotaExceeded) continue;
-      if (result.error)         continue;
+      if (result.quotaExceeded || result.error) {
+        // 실패한 모델은 10분간 후순위 → 다음 요청이 같은 모델에 호출을 낭비하지 않음
+        try { resultCache.put(MODEL_COOLDOWN_PREFIX + model, '1', MODEL_COOLDOWN_TTL); } catch (_) {}
+        continue;
+      }
       const payload = JSON.stringify({
         recommendations: result.recommendations,
         external: result.external || [],
         model: model,
       });
-      // 성공 결과를 30분 캐시 → 동일 조건 재요청 시 Gemini 재호출 없이 즉시 응답
-      try { resultCache.put(cacheKey, payload, 1800); } catch (_) {}
+      // 성공한 모델 기억 + 결과 6시간 캐시 → 동일 조건 재요청 시 Gemini 재호출 없이 즉시 응답
+      try {
+        resultCache.put(LAST_GOOD_MODEL_KEY, model, MODEL_CACHE_TTL);
+        resultCache.put(cacheKey, payload, CURATION_RESULT_TTL);
+      } catch (_) {}
       return ContentService
         .createTextOutput(payload)
         .setMimeType(ContentService.MimeType.JSON);
@@ -328,7 +385,8 @@ ${JSON.stringify(musicals)}
 위 데이터에서 조건에 적합한 작품을 선별하여 추천해주세요.
 - 적합도가 높은 작품 위주로 최대 8개까지 추천하세요. 조건에 정말로 맞는 작품만 고르고, 적으면 1-2개여도 됩니다. 억지로 채우지 마세요.
 - 선택 기준: 대상 적합성, 키워드 관련성, 수업/연수 활용도, 아이디어 노트의 풍부함.
-- 추천 이유(reason)는 해당 대상(학생/교사)에게 왜 적합한지 2문장 이내로 간결하게 적어주세요.
+- 추천 이유(reason)는 해당 대상(학생/교사)에게 왜 적합한지 1-2문장으로 간결하게 적어주세요.
+- 각 추천에 활용 팁(tip)을 함께 주세요: 이 작품을 '하고 싶은 활동' 조건에 맞춰 수업/연수에서 바로 써먹을 수 있는 구체적인 아이디어 1문장.
 
 [추가 추천 — '이런 작품도 있어요']
 위 스테이지빌 데이터에 없는 작품 중에서도, 사용자의 키워드·활동·관심 작품 조건과 관련 있는 뮤지컬을 3~5개 추천해주세요.
@@ -341,7 +399,7 @@ ${JSON.stringify(musicals)}
 ${outputLang}로 응답하세요. 작품명(title)은 데이터의 "${titleField}" 필드가 있으면 그것을, 없으면 한국어 원본(title)을 사용하세요. 추가 추천(external) 작품명도 ${outputLang} 기준 통용 명칭으로 작성하세요. 모든 추천 이유(reason)는 반드시 ${outputLang}로 작성하세요.
 
 반드시 아래 JSON 형식으로만 답하세요 (다른 텍스트 없이):
-{"recommendations":[{"id":"작품ID","title":"작품명(선택된 언어)","reason":"추천 이유 2-3문장(선택된 언어로)"}],"external":[{"title":"작품명(선택된 언어)","origin":"KR 또는 INTL","reason":"조건과 어떤 점이 관련 있는지 1-2문장(선택된 언어로)"}]}`;
+{"recommendations":[{"id":"작품ID","title":"작품명(선택된 언어)","reason":"추천 이유 1-2문장(선택된 언어로)","tip":"수업/연수 활용 아이디어 1문장(선택된 언어로)"}],"external":[{"title":"작품명(선택된 언어)","origin":"KR 또는 INTL","reason":"조건과 어떤 점이 관련 있는지 1-2문장(선택된 언어로)"}]}`;
 }
 
 function callGemini(apiKey, model, prompt) {
@@ -423,11 +481,15 @@ function handleRead() {
 }
 
 // 큐레이션 결과 캐시 키 (조건 조합을 짧은 해시로 변환 — CacheService 키 길이 제한 대응)
+// 입력을 정규화(공백 정리·소문자화·대상 정렬)하여 사실상 같은 조건이면 캐시를 재사용
+//   예: "환경,  진로" ↔ "환경, 진로" / "초등 1-2학년,교사" ↔ "교사,초등 1-2학년"
 function curationCacheKey(grade, keywords, lessonType, interests, lang) {
-  const raw = [grade, keywords, lessonType, interests, lang].join('\x1f');
+  const normText  = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const normGrade = String(grade || '').split(',').map(s => s.trim()).filter(Boolean).sort().join(',');
+  const raw = [normGrade, normText(keywords), normText(lessonType), normText(interests), lang].join('\x1f');
   const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, raw, Utilities.Charset.UTF_8);
   const hex = bytes.map(b => ('0' + (b & 0xff).toString(16)).slice(-2)).join('');
-  return 'stagebill_curate_v1_' + hex;
+  return 'stagebill_curate_v2_' + hex;
 }
 
 function jsonResponse(obj) {
