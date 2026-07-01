@@ -79,7 +79,11 @@ const translations = {
     'ai.interests.ph': '예: 레미제라블처럼 사회적 메시지가 있는 작품, 노래가 쉬운 작품...',
     'ai.submit': 'AI 큐레이션 받기',
     'ai.loading': 'AI가 스테이지빌을 샅샅이 뒤지고 있어요...',
+    'ai.loading2': '조건에 맞는 작품을 고르고 있어요...',
+    'ai.loading3': '추천 이유와 활용 팁을 정리하고 있어요...',
+    'ai.loading4': '거의 다 됐어요! 조금만 더 기다려 주세요...',
     'ai.loadingSub': '잠시만 기다려 주세요 ✨',
+    'ai.validation': '대상, 키워드, 활동 중 하나 이상을 입력해주세요.',
     'ai.result': 'AI 추천 결과',
     'ai.external': '이런 작품도 있어요',
     'ai.external.sub': '스테이지빌에는 없지만 입력하신 조건과 관련된 작품이에요. 카드를 누르면 구글에서 검색돼요.',
@@ -162,7 +166,11 @@ const translations = {
     'ai.interests.ph': 'e.g., works with social messages like Les Misérables, easy-to-sing songs...',
     'ai.submit': 'Get AI Curation',
     'ai.loading': 'AI is searching through STAGEBILL...',
+    'ai.loading2': 'Picking works that match your conditions...',
+    'ai.loading3': 'Writing reasons and classroom tips...',
+    'ai.loading4': 'Almost there! Just a moment...',
     'ai.loadingSub': 'Just a moment ✨',
+    'ai.validation': 'Please fill in at least one field: audience, keywords, or activity.',
     'ai.result': 'AI Recommendations',
     'ai.external': 'You Might Also Like',
     'ai.external.sub': 'Not in STAGEBILL, but related to the conditions you entered. Tap a card to search on Google.',
@@ -245,7 +253,11 @@ const translations = {
     'ai.interests.ph': '例: レ・ミゼラブルのような社会的メッセージのある作品、歌いやすい作品...',
     'ai.submit': 'AIキュレーションを受ける',
     'ai.loading': 'AIがSTAGEBILLを探しています...',
+    'ai.loading2': '条件に合う作品を選んでいます...',
+    'ai.loading3': 'おすすめ理由と活用ヒントをまとめています...',
+    'ai.loading4': 'もうすぐ完成します！',
     'ai.loadingSub': 'しばらくお待ちください ✨',
+    'ai.validation': '対象・キーワード・活動のいずれかを入力してください。',
     'ai.result': 'AIのおすすめ',
     'ai.external': 'こんな作品もあります',
     'ai.external.sub': 'STAGEBILLにはありませんが、入力された条件に関連する作品です。カードをタップするとGoogleで検索できます。',
@@ -325,6 +337,7 @@ function getCategoryColor(cat) {
 }
 
 // Build nav links dynamically from loaded data
+// (클릭 이벤트는 setupNavbar의 위임 리스너가 처리하므로 재호출해도 안전)
 function buildNavLinks() {
   const navLinks = document.getElementById('navLinks');
   // Remove existing category links, keep only "전체"
@@ -337,9 +350,13 @@ function buildNavLinks() {
     a.href = '#';
     a.dataset.filter = cat;
     a.textContent = getCategoryLabel(cat);
+    if (cat === currentFilter) a.classList.add('active');
     li.appendChild(a);
     navLinks.appendChild(li);
   });
+  // '전체' 링크의 active 상태 동기화
+  const allLink = navLinks.querySelector('a[data-filter="all"]');
+  if (allLink) allLink.classList.toggle('active', currentFilter === 'all');
 }
 
 // Extracts YouTube video ID from a single-video URL.
@@ -605,7 +622,49 @@ document.addEventListener('keydown', (e) => {
 // ==========================================
 const DATA_URL = 'https://script.google.com/macros/s/AKfycbxlzG6jhmT8YfZBSr3hxAJrHxuqlmHW2k5mEiCh2Oz8-WxlUv5uiWmVpwLZqPx1T3xCOQ/exec';
 
+// 최근 로딩한 데이터를 localStorage에 저장 → 재방문 시 즉시 화면을 그리고,
+// 백그라운드에서 최신 데이터를 받아 변경이 있을 때만 갱신 (stale-while-revalidate)
+const DATA_CACHE_KEY = 'stagebill_data_v1';
+
+function readCachedData() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(DATA_CACHE_KEY) || 'null');
+    if (cached && Array.isArray(cached.data) && cached.data.length > 0) return cached.data;
+  } catch (_) {}
+  return null;
+}
+
+function writeCachedData(data) {
+  try {
+    localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+  } catch (_) { /* 저장 공간 부족 등은 무시 — 캐시는 최적화일 뿐 */ }
+}
+
+// 데이터 로딩 중 빈 화면 대신 스켈레톤(자리 표시) 노출
+function showLoadingSkeleton() {
+  const area = document.getElementById('contentArea');
+  if (!area) return;
+  const cardHTML = '<div class="skeleton-card loading-shimmer"></div>'.repeat(6);
+  const rowHTML = `
+    <div class="content-row">
+      <div class="skeleton-title loading-shimmer"></div>
+      <div class="row-slider">${cardHTML}</div>
+    </div>`;
+  area.innerHTML = rowHTML + rowHTML;
+}
+
 async function loadData() {
+  // 1) 캐시가 있으면 먼저 그린다 (체감 로딩 시간 제거)
+  const cachedData = readCachedData();
+  if (cachedData) {
+    musicals = cachedData;
+    console.log(`[STAGEBILL] 캐시 데이터로 즉시 렌더링 (${musicals.length}개)`);
+    initApp();
+  } else {
+    showLoadingSkeleton();
+  }
+
+  // 2) 항상 최신 데이터를 받아온다
   try {
     console.log('[STAGEBILL] Apps Script 로딩 시작:', DATA_URL);
     const res = await fetch(DATA_URL, { redirect: 'follow' });
@@ -613,14 +672,34 @@ async function loadData() {
     const data = await res.json();
     if (data && data.error) throw new Error(`Apps Script 오류: ${data.error} / 시트 목록: ${JSON.stringify(data.availableSheets)}`);
     if (!Array.isArray(data) || data.length === 0) throw new Error('빈 배열 — 스프레드시트에 데이터가 없거나 시트명이 다릅니다');
-    musicals = data;
-    console.log(`[STAGEBILL] 데이터 로딩 성공 (${musicals.length}개)`);
+    console.log(`[STAGEBILL] 데이터 로딩 성공 (${data.length}개)`);
     pingDeployment();
-    initApp();
+
+    if (cachedData) {
+      // 캐시로 이미 렌더링된 상태: 내용이 실제로 바뀐 경우에만 다시 그림
+      if (JSON.stringify(data) !== JSON.stringify(cachedData)) {
+        console.log('[STAGEBILL] 데이터 변경 감지 → 화면 갱신');
+        musicals = data;
+        refreshAfterDataUpdate();
+      }
+    } else {
+      musicals = data;
+      initApp();
+    }
+    writeCachedData(data);
   } catch (err) {
     console.error('[STAGEBILL] 데이터 로딩 실패 →', err.message);
-    showDataError(err.message);
+    // 캐시로라도 화면이 그려져 있으면 에러 화면으로 덮지 않음
+    if (!cachedData) showDataError(err.message);
   }
+}
+
+// 백그라운드 갱신으로 데이터가 바뀌었을 때 화면 요소만 다시 그림 (이벤트 재등록 불필요)
+function refreshAfterDataUpdate() {
+  buildDynamicCategoryMap();
+  buildNavLinks();
+  const searchOn = document.getElementById('searchResults').style.display !== 'none';
+  if (!searchOn) renderContentRows(currentFilter);
 }
 
 // 배포된 Apps Script가 최신 코드(action=ping 지원)인지 검증
@@ -681,23 +760,23 @@ function setupNavbar() {
     navbar.classList.toggle('scrolled', window.scrollY > 50);
   });
 
-  // Category filter links
-  document.querySelectorAll('.nav-links a').forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      const filter = link.dataset.filter;
-      document.querySelectorAll('.nav-links a').forEach(l => l.classList.remove('active'));
-      link.classList.add('active');
-      currentFilter = filter;
+  // Category filter links — 위임 방식: buildNavLinks가 링크를 다시 만들어도 동작
+  document.getElementById('navLinks').addEventListener('click', (e) => {
+    const link = e.target.closest('a[data-filter]');
+    if (!link) return;
+    e.preventDefault();
+    const filter = link.dataset.filter;
+    document.querySelectorAll('.nav-links a').forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    currentFilter = filter;
 
-      // Close search results
-      document.getElementById('searchResults').style.display = 'none';
-      document.getElementById('searchInput').value = '';
-      document.getElementById('heroBanner').style.display = '';
-      document.getElementById('contentArea').style.display = '';
+    // Close search results
+    document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('heroBanner').style.display = '';
+    document.getElementById('contentArea').style.display = '';
 
-      renderContentRows(filter);
-    });
+    renderContentRows(filter);
   });
 }
 
@@ -748,14 +827,14 @@ function setupSearch() {
 
 function performSearch(query) {
   const q = query.toLowerCase();
+  const lower = v => String(v || '').toLowerCase();
   const results = musicals.filter(m => {
-    const titleMatch = m.title.toLowerCase().includes(q);
-    const descMatch = m.description.toLowerCase().includes(q);
-    const categoryMatch = m.category.toLowerCase().includes(q);
-    const curatorMatch = m.curator.toLowerCase().includes(q);
-    const allHashtags = [...(m.hashtags||[]), ...(m.hashtags_en||[]), ...(m.hashtags_ja||[])];
-    const hashtagMatch = allHashtags.some(h => h.toLowerCase().includes(q));
-    const ideaMatch = m.ideaNotes.toLowerCase().includes(q);
+    const descMatch = lower(m.description).includes(q);
+    const categoryMatch = lower(m.category).includes(q);
+    const curatorMatch = lower(m.curator).includes(q);
+    const allHashtags = [...toHashtagArray(m.hashtags), ...toHashtagArray(m.hashtags_en), ...toHashtagArray(m.hashtags_ja)];
+    const hashtagMatch = allHashtags.some(h => lower(h).includes(q));
+    const ideaMatch = lower(m.ideaNotes).includes(q);
     const numTexts = [
       m.number1_title||'', m.number1_desc||'',
       m.number1_title_en||'', m.number1_desc_en||'',
@@ -765,8 +844,8 @@ function performSearch(query) {
         ? m.recommendedNumbers.flatMap(n => [n.title||'', n.description||''])
         : []),
     ];
-    const numberMatch = numTexts.some(f => f.toLowerCase().includes(q));
-    const titleAllLang = [m.title, m.title_en||'', m.title_ja||''].join(' ').toLowerCase();
+    const numberMatch = numTexts.some(f => lower(f).includes(q));
+    const titleAllLang = lower([m.title, m.title_en || '', m.title_ja || ''].join(' '));
     return titleAllLang.includes(q) || descMatch || categoryMatch || curatorMatch || hashtagMatch || ideaMatch || numberMatch;
   });
 
@@ -1183,8 +1262,13 @@ function setupModal() {
     if (e.target === overlay) closeModal();
   });
 
+  // ESC: 가장 위에 떠 있는 오버레이부터 순서대로 닫음
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('modalOverlay').classList.contains('active')) { closeModal(); return; }
+    if (document.getElementById('aiOverlay').classList.contains('active'))     { closeAICuration(); return; }
+    if (document.getElementById('uploadOverlay').classList.contains('active')) { closeUpload(); return; }
+    if (document.getElementById('aboutOverlay').classList.contains('active'))  { closeAbout(); }
   });
 
   // Browser back button: close modal instead of leaving the page
@@ -1324,7 +1408,6 @@ function openModal(m) {
   if (refHeader) refHeader.textContent = t('modal.references');
 
   const refs = parseReferences(m.references);
-  console.log('[STAGEBILL] references raw:', JSON.stringify(m.references), '→ parsed:', refs.length + '개');
   if (refs.length > 0) {
     refsSection.style.display = 'block';
     refsEl.innerHTML = refs.map(ref => {
@@ -1475,7 +1558,13 @@ function openAICuration() {
   if (location.hash && /ai=/.test(location.hash)) {
     history.replaceState(null, '', location.pathname + location.search);
   }
-  resetAICuration();
+  // 직전 결과가 있으면 그대로 보여줌 (닫았다 열어도 결과 유지, 재호출 불필요)
+  // '다시 검색하기' 버튼으로 언제든 입력 화면으로 돌아갈 수 있음
+  if (currentAICuration) {
+    showAIStep('aiResultStep');
+  } else {
+    resetAICuration();
+  }
   openAICurationOverlay();
   // 오버레이가 열리는 동안(사용자가 폼 작성 중) Apps Script 컨테이너를 미리 깨워 둔다.
   // 콜드 스타트를 실제 큐레이션 요청의 임계 경로에서 제거하기 위한 워밍업.
@@ -1512,7 +1601,81 @@ function showAIStep(stepId) {
   });
 }
 
+// ── 클라이언트 결과 캐시 ─────────────────────────────
+// 같은 조건으로 다시 요청하면 서버 왕복 없이 즉시 결과 표시 (AI 호출 0회)
+const AI_RESULT_CACHE_KEY = 'stagebill_ai_results_v1';
+const AI_RESULT_CACHE_TTL = 6 * 60 * 60 * 1000; // 6시간 (서버 캐시와 동일)
+const AI_RESULT_CACHE_MAX = 20;                 // 최근 20개 조건만 보관
+
+// 조건 정규화: 공백 정리 + 소문자화 + 대상 정렬 → 사실상 같은 조건은 같은 키
+function normalizeAIQueryKey(grade, keywords, lessonType, interests, lang) {
+  const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const gradeSorted = String(grade || '').split(',').map(s => s.trim()).filter(Boolean).sort().join(',');
+  return [gradeSorted, norm(keywords), norm(lessonType), norm(interests), lang].join('\x1f');
+}
+
+function readAIResultCache(key) {
+  try {
+    const store = JSON.parse(localStorage.getItem(AI_RESULT_CACHE_KEY) || '{}');
+    const entry = store[key];
+    if (entry && entry.ts && (Date.now() - entry.ts) < AI_RESULT_CACHE_TTL) return entry.curation;
+  } catch (_) {}
+  return null;
+}
+
+function writeAIResultCache(key, curation) {
+  try {
+    let store = {};
+    try { store = JSON.parse(localStorage.getItem(AI_RESULT_CACHE_KEY) || '{}') || {}; } catch (_) {}
+    store[key] = { ts: Date.now(), curation };
+    // 오래된 항목부터 정리 (최대 개수 초과 시)
+    const keys = Object.keys(store);
+    if (keys.length > AI_RESULT_CACHE_MAX) {
+      keys.sort((a, b) => (store[a].ts || 0) - (store[b].ts || 0))
+        .slice(0, keys.length - AI_RESULT_CACHE_MAX)
+        .forEach(k => delete store[k]);
+    }
+    localStorage.setItem(AI_RESULT_CACHE_KEY, JSON.stringify(store));
+  } catch (_) { /* 저장 실패는 무시 */ }
+}
+
+// 입력 검증 안내 메시지
+function showAIFormHint(msg) {
+  const hint = document.getElementById('aiFormHint');
+  if (!hint) return;
+  hint.textContent = msg;
+  hint.hidden = false;
+}
+function hideAIFormHint() {
+  const hint = document.getElementById('aiFormHint');
+  if (hint) hint.hidden = true;
+}
+
+// 로딩 단계 메시지 순환 (긴 대기 시간의 체감 완화)
+let _aiLoadingTimer = null;
+function startAILoadingMessages() {
+  const el = document.querySelector('#aiLoadingStep .ai-loading-text');
+  if (!el) return;
+  const msgs = [t('ai.loading'), t('ai.loading2'), t('ai.loading3'), t('ai.loading4')];
+  let i = 0;
+  el.textContent = msgs[0];
+  clearInterval(_aiLoadingTimer);
+  _aiLoadingTimer = setInterval(() => {
+    i += 1;
+    if (i >= msgs.length) { clearInterval(_aiLoadingTimer); return; }
+    el.textContent = msgs[i];
+  }, 4000);
+}
+function stopAILoadingMessages() {
+  clearInterval(_aiLoadingTimer);
+  _aiLoadingTimer = null;
+}
+
+let aiSubmitInFlight = false; // 더블클릭 등으로 인한 중복 호출 방지
+
 async function submitAICuration() {
+  if (aiSubmitInFlight) return;
+
   const targets = Array.from(
     document.querySelectorAll('#aiTargetGrid input[type="checkbox"]:checked')
   ).map(cb => cb.value);
@@ -1522,11 +1685,25 @@ async function submitAICuration() {
   const interests  = document.getElementById('aiInterests').value.trim();
 
   if (!keywords && !lessonType && !grade) {
+    showAIFormHint(t('ai.validation'));
     document.getElementById('aiKeywords').focus();
     return;
   }
+  hideAIFormHint();
 
+  // 같은 조건의 결과가 로컬 캐시에 있으면 즉시 표시 (네트워크·AI 호출 없음)
+  const cacheKey = normalizeAIQueryKey(grade, keywords, lessonType, interests, currentLang);
+  const cachedCuration = readAIResultCache(cacheKey);
+  if (cachedCuration) {
+    console.log('[STAGEBILL AI] 로컬 캐시 결과 사용 (호출 0회)');
+    currentAICuration = cachedCuration;
+    renderAIResults(cachedCuration);
+    return;
+  }
+
+  aiSubmitInFlight = true;
   showAIStep('aiLoadingStep');
+  startAILoadingMessages();
 
   try {
     // GET + 쿼리 파라미터: CORS 프리플라이트 없음 + Apps Script 리다이렉트(302 → googleusercontent)에서 정상 동작
@@ -1622,9 +1799,13 @@ async function submitAICuration() {
       model: data.model,
       createdAt: new Date().toISOString(),
     };
+    writeAIResultCache(cacheKey, currentAICuration);
     renderAIResults(currentAICuration);
   } catch (err) {
     showAIError('📡', '연결에 문제가 생겼어요.', '인터넷 연결을 확인하고 다시 시도해주세요.');
+  } finally {
+    aiSubmitInFlight = false;
+    stopAILoadingMessages();
   }
 }
 
@@ -1729,6 +1910,7 @@ function renderAIResults(curation) {
         ${category ? `<span class="ai-card-category" style="background:${color}">${getCategoryLabel(category)}</span>` : ''}
       </div>
       <p class="ai-card-reason">${escapeHtml(rec.reason || '')}</p>
+      ${rec.tip ? `<p class="ai-card-tip">💡 ${escapeHtml(rec.tip)}</p>` : ''}
     `;
 
     if (musical) {
@@ -1794,6 +1976,7 @@ function buildCurationText() {
     const cat = musical ? getCategoryLabel(musical.category) : '';
     lines.push(`${idx + 1}. ${rec.title || ''}${cat ? `  [${cat}]` : ''}`);
     if (rec.reason) lines.push(`   → ${rec.reason}`);
+    if (rec.tip)    lines.push(`   💡 ${rec.tip}`);
     lines.push('');
   });
   const external = (currentAICuration.external || []).filter(e => e && e.title);
@@ -1922,6 +2105,7 @@ function buildJpgCaptureNode() {
           ${catLabel ? `<span style="background:${color};color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">${escapeHtml(catLabel)}</span>` : ''}
         </div>
         <p style="margin:0;font-size:14px;line-height:1.7;color:#b3b3b3;">${escapeHtml(rec.reason || '')}</p>
+        ${rec.tip ? `<p style="margin:10px 0 0;padding:8px 12px;font-size:13px;line-height:1.6;color:#d5d5d5;background:rgba(255,255,255,0.05);border-left:2px solid #E50914;border-radius:0 6px 6px 0;">💡 ${escapeHtml(rec.tip)}</p>` : ''}
       </div>`;
   }).join('');
 
@@ -1966,7 +2150,7 @@ function buildJpgCaptureNode() {
 // 공유 링크: 큐레이션을 URL 해시(base64)로 인코딩
 function encodeCurationToHash(c) {
   const payload = {
-    r: c.recommendations.map(rec => ({ id: rec.id, title: rec.title, reason: rec.reason })),
+    r: c.recommendations.map(rec => ({ id: rec.id, title: rec.title, reason: rec.reason, tip: rec.tip || '' })),
     e: (c.external || []).map(ex => ({ title: ex.title, origin: ex.origin, reason: ex.reason })),
     q: c.query,
     m: c.model || '',

@@ -1611,6 +1611,23 @@ body {
   100% { background-position: 200% 0; }
 }
 
+/* 초기 데이터 로딩 스켈레톤 (빈 화면 방지) */
+.skeleton-title {
+  width: 160px;
+  height: 24px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+.skeleton-card {
+  flex: 0 0 auto;
+  width: 250px;
+  height: 200px;
+  border-radius: var(--card-radius);
+}
+@media (max-width: 768px) {
+  .skeleton-card { width: 160px; height: 150px; }
+}
+
 /* ========== Page Transition ========== */
 .fade-in {
   animation: fadeIn 0.5s ease-out;
@@ -2018,6 +2035,13 @@ details.upload-details { margin-top: 4px; }
 .ai-field input:focus,
 .ai-field textarea:focus { border-color: var(--accent); }
 
+/* 입력 검증 안내 메시지 */
+.ai-form-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #ff8a8a;
+}
+
 .ai-submit-btn {
   width: 100%;
   padding: 12px;
@@ -2144,6 +2168,17 @@ details.upload-details { margin-top: 4px; }
 .ai-card-reason {
   font-size: 0.83rem;
   color: var(--text-secondary);
+  line-height: 1.6;
+}
+/* 추천 카드의 수업/연수 활용 팁 */
+.ai-card-tip {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.04);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.8rem;
+  color: #d5d5d5;
   line-height: 1.6;
 }
 

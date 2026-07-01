@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260630b">
+  <link rel="stylesheet" href="css/style.css?v=20260701">
 </head>
 <body>
   <!-- Navigation -->
@@ -118,7 +118,7 @@
 
   <!-- Detail Modal -->
   <div class="modal-overlay" id="modalOverlay">
-    <div class="modal" id="modal">
+    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <button class="modal-close" id="modalClose">&times;</button>
       <div class="modal-hero" id="modalHero">
         <div class="modal-hero-gradient"></div>
@@ -185,7 +185,7 @@
 
   <!-- AI Curation Overlay -->
   <div class="ai-overlay" id="aiOverlay">
-    <div class="ai-modal" id="aiModal">
+    <div class="ai-modal" id="aiModal" role="dialog" aria-modal="true" aria-label="AI 큐레이션">
       <button class="ai-close" id="aiClose">&times;</button>
 
       <!-- Step 1: 입력 폼 -->
@@ -212,7 +212,7 @@
             </div>
           </div>
           <div class="ai-field">
-            <label data-i18n="ai.keywords">수업/연수 키워드</label>
+            <label data-i18n="ai.keywords">키워드</label>
             <input type="text" id="aiKeywords" data-i18n-placeholder="ai.keywords.ph" placeholder="예: 환경, 진로, 자존감, 우정..." autocomplete="off" />
           </div>
           <div class="ai-field">
@@ -223,6 +223,7 @@
             <label><span data-i18n="ai.interests">관심 작품 / 기타 조건</span> <span class="ai-opt" data-i18n="ai.interests.opt">(선택)</span></label>
             <textarea id="aiInterests" rows="2" data-i18n-placeholder="ai.interests.ph" placeholder="예: 레미제라블처럼 사회적 메시지가 있는 작품, 노래가 쉬운 작품..."></textarea>
           </div>
+          <p class="ai-form-hint" id="aiFormHint" role="alert" hidden></p>
           <button class="ai-submit-btn" id="aiSubmitBtn" data-i18n="ai.submit">AI 큐레이션 받기</button>
         </div>
       </div>
@@ -287,7 +288,7 @@
 
   <!-- Upload Overlay -->
   <div class="upload-overlay" id="uploadOverlay">
-    <div class="upload-modal" id="uploadModal">
+    <div class="upload-modal" id="uploadModal" role="dialog" aria-modal="true" aria-label="업로드">
       <button class="upload-close" id="uploadClose">&times;</button>
 
       <!-- Step 1: 비밀번호 -->
@@ -320,7 +321,7 @@
 
   <!-- STAGEBILL 소개 Overlay -->
   <div class="about-overlay" id="aboutOverlay">
-    <div class="about-modal" id="aboutModal">
+    <div class="about-modal" id="aboutModal" role="dialog" aria-modal="true" aria-label="STAGEBILL 소개">
       <button class="about-close" id="aboutClose">&times;</button>
       <div class="about-header">
         <div class="about-logo">STAGEBILL</div>
@@ -336,6 +337,6 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="js/app.js?v=20260630b"></script>
+  <script src="js/app.js?v=20260701"></script>
 </body>
 </html>
