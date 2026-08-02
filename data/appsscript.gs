@@ -254,7 +254,8 @@ function getCompactMusicalList(cache) {
     id:          String(m.id    || ''),
     title:       String(m.title || ''),
     title_en:    String(m.title_en || ''),
-    title_ja:    String(m.title_ja || ''),
+    // 시트의 일본어 열 표기가 통일되어 있지 않아(_ja / _jp) 둘 다 인식한다
+    title_ja:    String(m.title_ja || m.title_jp || ''),
     category:    String(m.category   || ''),
     description: String(m.description|| '').substring(0, 150),
     ideaNotes:   String(m.ideaNotes  || '').substring(0, 150),

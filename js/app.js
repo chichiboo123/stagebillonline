@@ -53,6 +53,15 @@ const translations = {
     'stats.unit': '개',
     'footer.description': '교실에서 시작하는 뮤지컬 수업',
     'nav.aiCuration': 'AI 큐레이션',
+    'nav.more': '더보기',
+    'nav.index': '작품 색인',
+    'nav.indexTitle': '작품명으로 찾아보기',
+    'index.title': '작품 색인',
+    'index.sub': '작품명을 사전처럼 첫 글자별로 모아 봅니다.',
+    'index.filter.ph': '작품명으로 좁히기...',
+    'index.empty': '해당하는 작품이 없습니다.',
+    'index.close': '닫기',
+    'index.count': '{n}개 작품',
     'nav.upload': '업로드',
     'nav.uploadTitle': '새 내용 업로드',
     'nav.about': '소개',
@@ -140,6 +149,15 @@ const translations = {
     'stats.unit': '',
     'footer.description': 'Musical Class Starts in the Classroom',
     'nav.aiCuration': 'AI Curation',
+    'nav.more': 'More',
+    'nav.index': 'Title Index',
+    'nav.indexTitle': 'Browse by title',
+    'index.title': 'Title Index',
+    'index.sub': 'Every work gathered by first letter, like a dictionary.',
+    'index.filter.ph': 'Filter by title...',
+    'index.empty': 'No matching works.',
+    'index.close': 'Close',
+    'index.count': '{n} works',
     'nav.upload': 'Upload',
     'nav.uploadTitle': 'Upload new content',
     'nav.about': 'About',
@@ -227,6 +245,15 @@ const translations = {
     'stats.unit': '件',
     'footer.description': '教室から始まるミュージカル授業',
     'nav.aiCuration': 'AIキュレーション',
+    'nav.more': 'もっと見る',
+    'nav.index': '作品インデックス',
+    'nav.indexTitle': '作品名から探す',
+    'index.title': '作品インデックス',
+    'index.sub': '作品名を辞書のように頭文字ごとにまとめて見られます。',
+    'index.filter.ph': '作品名で絞り込み...',
+    'index.empty': '該当する作品がありません。',
+    'index.close': '閉じる',
+    'index.count': '{n}作品',
     'nav.upload': 'アップロード',
     'nav.uploadTitle': '新しい内容をアップロード',
     'nav.about': 'について',
@@ -309,10 +336,54 @@ function buildDynamicCategoryMap() {
       ja: (m.category_ja && String(m.category_ja).trim()) || cat,
     };
   });
+  _shortLabelCache = {};
 }
 
 function getCategoryLabel(cat) {
   return (CATEGORY_MAP[cat] && CATEGORY_MAP[cat][currentLang]) || cat;
+}
+
+// ── 짧은 카테고리 라벨 ──────────────────────────────────────────────
+// '환경·지속가능발전' / 'Environment and Sustainable Development' 처럼 긴 이름이
+// 카드 배지·내비게이션을 밀어내는 문제를 막기 위해, 의미를 잃지 않는 선에서 줄인다.
+//   "Environment and Sustainable Development" → "Environment"
+//   "환경·지속가능발전"                        → "환경"
+//   "環境・持続可能な発展"                      → "環境"
+// 줄인 결과가 다른 카테고리와 겹치면 그 카테고리는 전체 이름을 그대로 쓴다.
+const CJK_RE = /[\u3000-\u9FFF\uAC00-\uD7AF\uFF00-\uFFEF]/;
+const CAT_SPLIT_RE = /\s*(?:[·・/,、&]|\band\b|\bund\b|と)\s*/i;
+
+function shortenCategoryLabel(label) {
+  const full = String(label || '').trim();
+  if (!full) return full;
+  const head = (full.split(CAT_SPLIT_RE)[0] || '').trim() || full;
+  const limit = CJK_RE.test(head) ? 8 : 14;
+  if (head.length <= limit) return head;
+  return head.slice(0, limit - 1).trim() + '…';
+}
+
+let _shortLabelCache = {};
+
+// 현재 언어 기준 축약 라벨 테이블을 만든다 (충돌 시 전체 이름 사용)
+function buildCategoryShortLabels() {
+  const cats = Object.keys(CATEGORY_MAP);
+  const table = {};
+  const seen = {};
+  cats.forEach(cat => {
+    const short = shortenCategoryLabel(getCategoryLabel(cat));
+    seen[short] = (seen[short] || 0) + 1;
+    table[cat] = short;
+  });
+  cats.forEach(cat => {
+    if (seen[table[cat]] > 1) table[cat] = getCategoryLabel(cat); // 모호하면 원래 이름
+  });
+  _shortLabelCache[currentLang] = table;
+  return table;
+}
+
+function getCategoryShortLabel(cat) {
+  const table = _shortLabelCache[currentLang] || buildCategoryShortLabels();
+  return table[cat] || shortenCategoryLabel(getCategoryLabel(cat));
 }
 
 // Category color map + fallback palette for dynamically added categories
@@ -336,27 +407,144 @@ function getCategoryColor(cat) {
   return _dynamicCatColors[cat];
 }
 
+// 카테고리별 콘텐츠 수 (내비 '더보기' 패널에 표시)
+function getCategoryCounts() {
+  const counts = {};
+  musicals.forEach(m => {
+    if (!m || !m.category) return;
+    counts[m.category] = (counts[m.category] || 0) + 1;
+  });
+  return counts;
+}
+
 // Build nav links dynamically from loaded data
 // (클릭 이벤트는 setupNavbar의 위임 리스너가 처리하므로 재호출해도 안전)
+//
+// 카테고리가 늘어나면 상단 한 줄에 다 들어가지 않는다. 전부 늘어놓는 대신
+// 폭에 맞는 만큼만 노출하고 나머지는 '더보기' 패널로 접는다(reflowNavLinks).
 function buildNavLinks() {
   const navLinks = document.getElementById('navLinks');
-  // Remove existing category links, keep only "전체"
+  buildCategoryShortLabels();
+  // Remove existing category links + '더보기' 항목, keep only "전체"
   navLinks.querySelectorAll('li:not(:first-child)').forEach(li => li.remove());
   // Unique categories in order of first appearance
   const categories = [...new Set(musicals.map(m => m.category).filter(Boolean))];
   categories.forEach(cat => {
     const li = document.createElement('li');
+    li.className = 'nav-cat-item';
+    li.dataset.category = cat;
     const a = document.createElement('a');
     a.href = '#';
     a.dataset.filter = cat;
-    a.textContent = getCategoryLabel(cat);
+    a.textContent = getCategoryShortLabel(cat);
+    a.title = getCategoryLabel(cat);
     if (cat === currentFilter) a.classList.add('active');
     li.appendChild(a);
     navLinks.appendChild(li);
   });
+  navLinks.appendChild(createNavCatMore());
   // '전체' 링크의 active 상태 동기화
   const allLink = navLinks.querySelector('a[data-filter="all"]');
   if (allLink) allLink.classList.toggle('active', currentFilter === 'all');
+  scheduleNavReflow();
+}
+
+// '더보기' 드롭다운 컨테이너 (내용은 reflowNavLinks가 채운다)
+function createNavCatMore() {
+  const li = document.createElement('li');
+  li.className = 'nav-cat-more';
+  li.id = 'navCatMore';
+  li.innerHTML = `
+    <button class="nav-cat-more-btn" type="button" aria-haspopup="true" aria-expanded="false">
+      <span class="nav-cat-more-label">${t('nav.more')}</span>
+      <span class="nav-cat-more-count"></span>
+      <svg class="lang-caret" viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+    </button>
+    <div class="nav-cat-more-menu" role="menu"></div>`;
+  li.querySelector('.nav-cat-more-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleNavDropdown(li);
+  });
+  return li;
+}
+
+let _navReflowRaf = null;
+function scheduleNavReflow() {
+  if (_navReflowRaf) cancelAnimationFrame(_navReflowRaf);
+  _navReflowRaf = requestAnimationFrame(() => { _navReflowRaf = null; reflowNavLinks(); });
+}
+
+// 한 줄에 들어가는 카테고리만 남기고 나머지는 '더보기' 패널로 옮긴다.
+// 모바일(≤768px)에서는 내비가 가로 스크롤 전용 줄이므로 접지 않는다.
+function reflowNavLinks() {
+  const navLinks = document.getElementById('navLinks');
+  const more = document.getElementById('navCatMore');
+  if (!navLinks || !more) return;
+
+  const items = [...navLinks.querySelectorAll('.nav-cat-item')];
+  items.forEach(li => li.classList.remove('nav-cat-hidden'));
+
+  const isDesktop = window.matchMedia('(min-width: 769px)').matches;
+  if (!isDesktop || items.length === 0) {
+    more.classList.add('nav-cat-hidden');
+    return;
+  }
+
+  const styles = getComputedStyle(navLinks);
+  const gap = parseFloat(styles.columnGap || styles.gap) || 0;
+  const allItem = navLinks.querySelector('li:first-child');
+  const available = navLinks.clientWidth;
+
+  // '더보기' 버튼 폭을 먼저 확보해 둔다
+  more.classList.remove('nav-cat-hidden');
+  const moreWidth = more.offsetWidth + gap;
+
+  let used = allItem ? allItem.offsetWidth + gap : 0;
+  const overflow = [];
+  items.forEach(li => {
+    const w = li.offsetWidth + gap;
+    // 남은 항목이 하나뿐이면 '더보기' 자리를 비워둘 필요가 없다
+    const reserve = (li === items[items.length - 1] && overflow.length === 0) ? 0 : moreWidth;
+    if (overflow.length > 0 || used + w + reserve > available) {
+      overflow.push(li);
+    } else {
+      used += w;
+    }
+  });
+
+  // 현재 선택된 카테고리는 항상 보이도록 마지막 노출 항목과 자리를 바꾼다
+  const activeIdx = overflow.findIndex(li => li.dataset.category === currentFilter);
+  if (activeIdx >= 0) {
+    const visible = items.filter(li => overflow.indexOf(li) === -1);
+    const swapOut = visible[visible.length - 1];
+    if (swapOut) {
+      const activeLi = overflow[activeIdx];
+      navLinks.insertBefore(activeLi, swapOut);
+      overflow.splice(activeIdx, 1);
+      overflow.unshift(swapOut);
+    }
+  }
+
+  // 아무것도 못 들어가는 좁은 폭에서도 최소 1개는 노출 (빈 내비 방지)
+  if (overflow.length === items.length && overflow.length > 1) overflow.shift();
+
+  overflow.forEach(li => li.classList.add('nav-cat-hidden'));
+  if (overflow.length === 0) {
+    more.classList.add('nav-cat-hidden');
+    return;
+  }
+  more.classList.remove('nav-cat-hidden');
+  more.querySelector('.nav-cat-more-label').textContent = t('nav.more');
+  more.querySelector('.nav-cat-more-count').textContent = overflow.length;
+  const counts = getCategoryCounts();
+  more.querySelector('.nav-cat-more-menu').innerHTML = overflow.map(li => {
+    const cat = li.dataset.category;
+    return `<a href="#" class="nav-cat-more-link${cat === currentFilter ? ' active' : ''}" data-filter="${escapeHtml(cat)}" role="menuitem">
+      <span class="nav-cat-more-dot" style="background:${getCategoryColor(cat)}"></span>
+      <span class="nav-cat-more-name">${escapeHtml(getCategoryLabel(cat))}</span>
+      <span class="nav-cat-more-num">${counts[cat] || 0}</span>
+    </a>`;
+  }).join('');
 }
 
 // Extracts YouTube video ID from a single-video URL.
@@ -405,13 +593,51 @@ function parseReferences(raw) {
   }).filter(Boolean);
 }
 
-// Returns translated field value if available, falls back to Korean original.
+// ── 다국어 컬럼 해석 ────────────────────────────────────────────────
+// 스프레드시트의 일본어 열 이름이 통일되어 있지 않다(`title_ja` vs `number1_title_jp`).
+// 언어별로 허용 접미사를 모두 시도해 어느 쪽 표기든 인식한다.
+const LANG_SUFFIXES = {
+  ko: [''],
+  en: ['_en'],
+  ja: ['_ja', '_jp'],
+};
+
+// 해당 언어 열이 비어 있을 때 어떤 언어로 대체할지.
+// 일본어는 한국어 원문(한글)보다 영어 표기가 읽기 쉬우므로 ja → en → ko 순으로 내려간다.
+const LANG_FALLBACK = {
+  ko: ['ko'],
+  en: ['en', 'ko'],
+  ja: ['ja', 'en', 'ko'],
+};
+
+function suffixesFor(lang) {
+  return LANG_SUFFIXES[lang] || [''];
+}
+
+// 특정 언어의 원본 값만 조회 (폴백 없음). 없으면 '' 반환.
+function rawLocalizedField(m, fieldKey, lang) {
+  for (const suffix of suffixesFor(lang)) {
+    const v = m[`${fieldKey}${suffix}`];
+    if (v != null && String(v).trim()) return String(v);
+  }
+  return '';
+}
+
+// Returns translated field value if available, falls back through LANG_FALLBACK.
 // Expects spreadsheet to supply e.g. description_en, description_ja,
 // ideaNotes_en, ideaNotes_ja fields from GOOGLETRANSLATE columns.
 function getLocalizedField(m, fieldKey) {
-  if (currentLang === 'ko') return m[fieldKey] || '';
-  const translated = m[`${fieldKey}_${currentLang}`];
-  return (translated && String(translated).trim()) ? String(translated) : (m[fieldKey] || '');
+  if (!m) return '';
+  for (const lang of (LANG_FALLBACK[currentLang] || ['ko'])) {
+    const v = rawLocalizedField(m, fieldKey, lang);
+    if (v) return v;
+  }
+  return '';
+}
+
+// 작품명 전용 헬퍼 (카드 alt·색인·검색 등 여러 곳에서 재사용)
+function getLocalizedTitle(m) {
+  return getLocalizedField(m, 'title') || String((m && m.title) || '');
 }
 
 function toHashtagArray(val) {
@@ -421,10 +647,14 @@ function toHashtagArray(val) {
 }
 
 function getLocalizedHashtags(m) {
-  if (currentLang === 'ko') return toHashtagArray(m.hashtags);
-  const localized = m[`hashtags_${currentLang}`];
-  const arr = toHashtagArray(localized);
-  return arr.length > 0 ? arr : toHashtagArray(m.hashtags);
+  if (!m) return [];
+  for (const lang of (LANG_FALLBACK[currentLang] || ['ko'])) {
+    for (const suffix of suffixesFor(lang)) {
+      const arr = toHashtagArray(m[`hashtags${suffix}`]);
+      if (arr.length > 0) return arr;
+    }
+  }
+  return [];
 }
 
 // Returns localized recommended numbers.
@@ -433,7 +663,6 @@ function getLocalizedHashtags(m) {
 //   B) Old array (recommendedNumbers) + new translation columns in JSON
 //   C) Old array only → returns as-is (no translation until Apps Script updated)
 function getLocalizedNumbers(m) {
-  const suffix = currentLang === 'ko' ? '' : (currentLang === 'ja' ? '_jp' : '_en');
   const legacy = Array.isArray(m.recommendedNumbers) ? m.recommendedNumbers : [];
 
   // Korean source: prefer flat field, fall back to legacy array item
@@ -445,16 +674,64 @@ function getLocalizedNumbers(m) {
   const result = [];
   if (ko1Title) {
     result.push({
-      title:       (suffix && m[`number1_title${suffix}`]) || ko1Title,
-      description: (suffix && m[`number1_desc${suffix}`])  || ko1Desc,
+      title:       getLocalizedField(m, 'number1_title') || ko1Title,
+      description: getLocalizedField(m, 'number1_desc')  || ko1Desc,
     });
   }
   if (ko2Title) {
-    result.push({ title: ko2Title, description: ko2Desc });
+    result.push({
+      title:       getLocalizedField(m, 'number2_title') || ko2Title,
+      description: getLocalizedField(m, 'number2_desc')  || ko2Desc,
+    });
   }
   // If still nothing found but legacy has more items, return legacy array as-is
   return result.length > 0 ? result : legacy;
 }
+
+// ── 번역 열 진단 ────────────────────────────────────────────────────
+// "일본어 모드인데 작품명이 한국어로 나온다" 같은 문제는 코드가 아니라
+// 스프레드시트에 해당 열이 비어 있어서 생긴다. 어떤 작품의 어떤 열이 비었는지
+// 콘솔에 정리해 출력한다. (window.stagebillTranslationReport()로 언제든 재실행)
+const TRANSLATION_CHECK_FIELDS = ['title', 'description', 'ideaNotes', 'hashtags'];
+
+function collectMissingTranslations() {
+  const report = { en: {}, ja: {} };
+  ['en', 'ja'].forEach(lang => {
+    TRANSLATION_CHECK_FIELDS.forEach(field => {
+      report[lang][field] = musicals
+        .filter(m => m && m.title && !rawLocalizedField(m, field, lang))
+        .map(m => String(m.title));
+    });
+  });
+  return report;
+}
+
+function stagebillTranslationReport() {
+  const report = collectMissingTranslations();
+  const summary = [];
+  ['en', 'ja'].forEach(lang => {
+    TRANSLATION_CHECK_FIELDS.forEach(field => {
+      const missing = report[lang][field];
+      if (missing.length === 0) return;
+      const columns = suffixesFor(lang).map(s => `${field}${s}`).join(' 또는 ');
+      summary.push({
+        언어: lang,
+        열: columns,
+        비어있는_작품수: missing.length,
+        예시: missing.slice(0, 5).join(', ') + (missing.length > 5 ? ' …' : ''),
+      });
+    });
+  });
+  if (summary.length === 0) {
+    console.log('[STAGEBILL i18n] 모든 번역 열이 채워져 있습니다.');
+  } else {
+    console.groupCollapsed(`[STAGEBILL i18n] 비어 있는 번역 열 ${summary.length}종 — 스프레드시트를 채우면 자동 반영됩니다`);
+    console.table(summary);
+    console.groupEnd();
+  }
+  return report;
+}
+if (typeof window !== 'undefined') window.stagebillTranslationReport = stagebillTranslationReport;
 
 function applyI18n() {
   // Update all data-i18n elements
@@ -484,12 +761,14 @@ function applyI18n() {
   // Update nav links text — all category filters
   const navAll = document.querySelector('.nav-links a[data-filter="all"]');
   if (navAll) navAll.textContent = t('nav.all');
-  document.querySelectorAll('.nav-links a[data-filter]').forEach(link => {
+  buildCategoryShortLabels();
+  document.querySelectorAll('.nav-links .nav-cat-item a[data-filter]').forEach(link => {
     const cat = link.dataset.filter;
     if (cat === 'all') return;
-    const label = getCategoryLabel(cat);
-    link.textContent = label;
+    link.textContent = getCategoryShortLabel(cat);
+    link.title = getCategoryLabel(cat);
   });
+  scheduleNavReflow();
 
   // Update search placeholder
   const searchInput = document.getElementById('searchInput');
@@ -501,6 +780,12 @@ function applyI18n() {
   // Re-render content if already loaded
   if (musicals.length > 0) {
     renderContentRows(currentFilter);
+    if (isTitleIndexOpen()) {
+      const idxFilter = document.getElementById('indexFilter');
+      renderTitleIndex(idxFilter ? idxFilter.value : '');
+      document.getElementById('contentArea').style.display = 'none';
+      document.getElementById('heroBanner').style.display = 'none';
+    }
     if (currentHeroMusical) {
       refreshHeroText(currentHeroMusical);
     }
@@ -538,7 +823,7 @@ const LANG_SHORT = { ko: 'KO', en: 'EN', ja: 'JP' };
 
 // 열려 있는 모든 네비 드롭다운을 닫음
 function closeAllNavDropdowns() {
-  document.querySelectorAll('.lang-dropdown.open, .nav-more.open').forEach(el => {
+  document.querySelectorAll('.lang-dropdown.open, .nav-more.open, .nav-cat-more.open').forEach(el => {
     el.classList.remove('open');
     const trigger = el.querySelector('[aria-expanded]');
     if (trigger) trigger.setAttribute('aria-expanded', 'false');
@@ -601,7 +886,7 @@ function setupNavMore() {
   });
   menu.addEventListener('click', (e) => e.stopPropagation());
 
-  const actionMap = { ai: 'aiCurationBtn', upload: 'uploadBtn', about: 'aboutBtn' };
+  const actionMap = { ai: 'aiCurationBtn', index: 'indexBtn', upload: 'uploadBtn', about: 'aboutBtn' };
   document.querySelectorAll('.nav-more-item').forEach(item => {
     item.addEventListener('click', () => {
       closeAllNavDropdowns();
@@ -748,7 +1033,9 @@ function initApp() {
   setupUpload();
   setupAICuration();
   setupAbout();
+  setupTitleIndex();
   applyI18n();
+  stagebillTranslationReport();
 }
 
 // ==========================================
@@ -761,6 +1048,7 @@ function setupNavbar() {
   });
 
   // Category filter links — 위임 방식: buildNavLinks가 링크를 다시 만들어도 동작
+  // ('더보기' 패널 안의 링크도 같은 ul 안에 있으므로 함께 처리된다)
   document.getElementById('navLinks').addEventListener('click', (e) => {
     const link = e.target.closest('a[data-filter]');
     if (!link) return;
@@ -770,14 +1058,19 @@ function setupNavbar() {
     link.classList.add('active');
     currentFilter = filter;
 
-    // Close search results
+    // Close search results / 색인 화면
     document.getElementById('searchResults').style.display = 'none';
     document.getElementById('searchInput').value = '';
+    hideTitleIndex();
     document.getElementById('heroBanner').style.display = '';
     document.getElementById('contentArea').style.display = '';
 
     renderContentRows(filter);
+    scheduleNavReflow();
   });
+
+  // 폭이 바뀌면 상단 카테고리 노출 개수를 다시 계산
+  window.addEventListener('resize', scheduleNavReflow);
 }
 
 // ==========================================
@@ -829,23 +1122,33 @@ function performSearch(query) {
   const q = query.toLowerCase();
   const lower = v => String(v || '').toLowerCase();
   const results = musicals.filter(m => {
-    const descMatch = lower(m.description).includes(q);
-    const categoryMatch = lower(m.category).includes(q);
+    const descMatch = [m.description, m.description_en, m.description_ja, m.description_jp]
+      .some(f => lower(f).includes(q));
+    const categoryMatch = [m.category, m.category_en, m.category_ja, m.category_jp]
+      .some(f => lower(f).includes(q));
     const curatorMatch = lower(m.curator).includes(q);
-    const allHashtags = [...toHashtagArray(m.hashtags), ...toHashtagArray(m.hashtags_en), ...toHashtagArray(m.hashtags_ja)];
+    const allHashtags = [
+      ...toHashtagArray(m.hashtags), ...toHashtagArray(m.hashtags_en),
+      ...toHashtagArray(m.hashtags_ja), ...toHashtagArray(m.hashtags_jp),
+    ];
     const hashtagMatch = allHashtags.some(h => lower(h).includes(q));
-    const ideaMatch = lower(m.ideaNotes).includes(q);
+    const ideaMatch = [m.ideaNotes, m.ideaNotes_en, m.ideaNotes_ja, m.ideaNotes_jp]
+      .some(f => lower(f).includes(q));
     const numTexts = [
       m.number1_title||'', m.number1_desc||'',
       m.number1_title_en||'', m.number1_desc_en||'',
       m.number1_title_jp||'', m.number1_desc_jp||'',
+      m.number1_title_ja||'', m.number1_desc_ja||'',
       m.number2_title||'', m.number2_desc||'',
+      m.number2_title_en||'', m.number2_desc_en||'',
+      m.number2_title_jp||'', m.number2_desc_jp||'',
+      m.number2_title_ja||'', m.number2_desc_ja||'',
       ...(Array.isArray(m.recommendedNumbers)
         ? m.recommendedNumbers.flatMap(n => [n.title||'', n.description||''])
         : []),
     ];
     const numberMatch = numTexts.some(f => lower(f).includes(q));
-    const titleAllLang = lower([m.title, m.title_en || '', m.title_ja || ''].join(' '));
+    const titleAllLang = lower([m.title, m.title_en || '', m.title_ja || '', m.title_jp || ''].join(' '));
     return titleAllLang.includes(q) || descMatch || categoryMatch || curatorMatch || hashtagMatch || ideaMatch || numberMatch;
   });
 
@@ -859,6 +1162,7 @@ function showSearchResults(results, query) {
 
   document.getElementById('heroBanner').style.display = 'none';
   document.getElementById('contentArea').style.display = 'none';
+  hideTitleIndex();
   section.style.display = 'block';
 
   const countLabel = currentLang === 'en'
@@ -882,8 +1186,255 @@ function showSearchResults(results, query) {
 
 function hideSearchResults() {
   document.getElementById('searchResults').style.display = 'none';
+  if (isTitleIndexOpen()) return; // 색인 화면이 떠 있으면 히어로를 되살리지 않는다
   document.getElementById('heroBanner').style.display = '';
   document.getElementById('contentArea').style.display = '';
+}
+
+// ==========================================
+// 작품 색인 (사전형 가나다/ABC 보기)
+// ==========================================
+// 카테고리가 아니라 '작품명'을 기준으로 전체 목록을 훑어볼 수 있는 화면.
+// 첫 글자(한글 초성 / 알파벳 / 일본어 오십음행)로 묶고, 상단 점프바로 이동한다.
+
+const HANGUL_CHOSUNG = [
+  'ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ',
+  'ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ',
+];
+// 된소리는 예사소리 그룹으로 합친다 (ㄲ→ㄱ)
+const CHOSUNG_GROUP = { 'ㄲ': 'ㄱ', 'ㄸ': 'ㄷ', 'ㅃ': 'ㅂ', 'ㅆ': 'ㅅ', 'ㅉ': 'ㅈ' };
+const KO_INDEX_ORDER = ['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const EN_INDEX_ORDER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const JA_INDEX_ORDER = ['あ','か','さ','た','な','は','ま','や','ら','わ'];
+// 오십음행 매핑 (탁음·반탁음·소문자 포함)
+const JA_ROWS = {
+  'あ': 'あいうえおぁぃぅぇぉヴ',
+  'か': 'かきくけこがぎぐげご',
+  'さ': 'さしすせそざじずぜぞ',
+  'た': 'たちつてとだぢづでどっ',
+  'な': 'なにぬねの',
+  'は': 'はひふへほばびぶべぼぱぴぷぺぽ',
+  'ま': 'まみむめも',
+  'や': 'やゆよゃゅょ',
+  'ら': 'らりるれろ',
+  'わ': 'わをんゎ',
+};
+const OTHER_INDEX_KEY = '#';
+// 한자로 시작하는 제목(주로 일본어)은 읽는 법을 알 수 없으므로 한 그룹으로 모은다
+const IDEOGRAPH_INDEX_KEY = '漢';
+
+// 카타카나 → 히라가나
+function kataToHira(ch) {
+  const code = ch.charCodeAt(0);
+  if (code >= 0x30A1 && code <= 0x30F6) return String.fromCharCode(code - 0x60);
+  return ch;
+}
+
+// 제목의 첫 글자로 색인 그룹 키를 만든다
+function getIndexKey(title) {
+  const ch = String(title || '').trim().charAt(0);
+  if (!ch) return OTHER_INDEX_KEY;
+  const code = ch.charCodeAt(0);
+
+  // 한글 음절 → 초성
+  if (code >= 0xAC00 && code <= 0xD7A3) {
+    const cho = HANGUL_CHOSUNG[Math.floor((code - 0xAC00) / 588)];
+    return CHOSUNG_GROUP[cho] || cho;
+  }
+  // 한글 자모 단독 표기
+  if (code >= 0x3131 && code <= 0x314E) return CHOSUNG_GROUP[ch] || ch;
+  // 알파벳
+  if (/[A-Za-z]/.test(ch)) return ch.toUpperCase();
+  // 가나 → 오십음행
+  const hira = kataToHira(ch);
+  for (const row of JA_INDEX_ORDER) {
+    if (JA_ROWS[row].indexOf(hira) >= 0) return row;
+  }
+  // 한자
+  if ((code >= 0x3400 && code <= 0x4DBF) || (code >= 0x4E00 && code <= 0x9FFF)) {
+    return IDEOGRAPH_INDEX_KEY;
+  }
+  return OTHER_INDEX_KEY;
+}
+
+// 문자열을 초성 문자열로 변환 ('빨래' → 'ㅂㄹ'). 한글이 아닌 글자는 그대로 둔다.
+// 된소리는 예사소리로 합쳐 'ㅂㄹ'로 검색해도 '빨래'가 잡히게 한다.
+function toChosungString(str) {
+  return String(str || '').split('').map(ch => {
+    const code = ch.charCodeAt(0);
+    if (code >= 0xAC00 && code <= 0xD7A3) {
+      const cho = HANGUL_CHOSUNG[Math.floor((code - 0xAC00) / 588)];
+      return CHOSUNG_GROUP[cho] || cho;
+    }
+    return CHOSUNG_GROUP[ch] || ch;
+  }).join('');
+}
+
+// 현재 언어에 맞춘 그룹 정렬 순서
+function getIndexOrder() {
+  if (currentLang === 'en') return [...EN_INDEX_ORDER, ...KO_INDEX_ORDER, ...JA_INDEX_ORDER];
+  if (currentLang === 'ja') return [...JA_INDEX_ORDER, ...EN_INDEX_ORDER, ...KO_INDEX_ORDER];
+  return [...KO_INDEX_ORDER, ...EN_INDEX_ORDER, ...JA_INDEX_ORDER];
+}
+
+function localeTag() {
+  return currentLang === 'ja' ? 'ja-JP' : currentLang === 'en' ? 'en-US' : 'ko-KR';
+}
+
+// 같은 제목의 여러 콘텐츠(카테고리 버전)를 한 항목으로 묶는다
+function buildTitleIndexEntries() {
+  const byTitle = new Map();
+  musicals.filter(m => m && m.title).forEach(m => {
+    const key = String(m.title).trim();
+    if (!byTitle.has(key)) byTitle.set(key, []);
+    byTitle.get(key).push(m);
+  });
+  return [...byTitle.entries()].map(([key, items]) => ({
+    key,
+    items,
+    label: getLocalizedTitle(items[0]) || key,
+  }));
+}
+
+function groupTitleIndexEntries(entries) {
+  const groups = new Map();
+  entries.forEach(entry => {
+    const k = getIndexKey(entry.label);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(entry);
+  });
+  const order = getIndexOrder();
+  const rank = k => {
+    if (k === OTHER_INDEX_KEY) return 9999;
+    if (k === IDEOGRAPH_INDEX_KEY) return 9998;
+    const i = order.indexOf(k);
+    return i === -1 ? 9997 : i;
+  };
+  const tag = localeTag();
+  return [...groups.entries()]
+    .sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0], tag))
+    .map(([k, list]) => ({
+      key: k,
+      entries: list.sort((a, b) => a.label.localeCompare(b.label, tag)),
+    }));
+}
+
+function isTitleIndexOpen() {
+  const el = document.getElementById('indexSection');
+  return !!el && el.style.display !== 'none';
+}
+
+function renderTitleIndex(filterText = '') {
+  const section = document.getElementById('indexSection');
+  if (!section) return;
+  const jumpEl   = document.getElementById('indexJump');
+  const groupsEl = document.getElementById('indexGroups');
+  const countEl  = document.getElementById('indexCount');
+
+  const q = String(filterText || '').trim().toLowerCase();
+  let entries = buildTitleIndexEntries();
+  if (q) {
+    const chosungQuery = /^[ㄱ-ㅎ]+$/.test(q) ? toChosungString(q) : '';
+    entries = entries.filter(e => {
+      // 'ㅂㄹ' 처럼 초성만 입력하면 초성으로 찾는다 (사전식 검색).
+      // 색인이므로 '포함'이 아니라 '시작'으로 맞춰야 점프바와 결과가 어긋나지 않는다.
+      if (chosungQuery &&
+          (toChosungString(e.label).startsWith(chosungQuery) || toChosungString(e.key).startsWith(chosungQuery))) return true;
+      return e.label.toLowerCase().includes(q) ||
+        e.key.toLowerCase().includes(q) ||
+        e.items.some(m => ['title_en', 'title_ja', 'title_jp']
+          .some(f => String(m[f] || '').toLowerCase().includes(q)));
+    });
+  }
+  const groups = groupTitleIndexEntries(entries);
+
+  countEl.textContent = t('index.count').replace('{n}', entries.length);
+
+  if (entries.length === 0) {
+    jumpEl.innerHTML = '';
+    groupsEl.innerHTML = `<p class="index-empty">${t('index.empty')}</p>`;
+    return;
+  }
+
+  jumpEl.innerHTML = groups.map(g =>
+    `<button class="index-jump-btn" type="button" data-jump="${escapeHtml(g.key)}">${escapeHtml(g.key)}</button>`
+  ).join('');
+
+  groupsEl.innerHTML = groups.map(g => `
+    <section class="index-group" id="index-group-${encodeURIComponent(g.key)}">
+      <h3 class="index-group-key">${escapeHtml(g.key)}<span class="index-group-num">${g.entries.length}</span></h3>
+      <ul class="index-list">
+        ${g.entries.map(entry => {
+          const cats = [...new Set(entry.items.map(m => m.category).filter(Boolean))];
+          const chips = cats.map(c =>
+            `<span class="index-cat-chip" style="background:${getCategoryColor(c)}" title="${escapeHtml(getCategoryLabel(c))}">${escapeHtml(getCategoryShortLabel(c))}</span>`
+          ).join('');
+          const sub = entry.label !== entry.key ? `<span class="index-item-sub">${escapeHtml(entry.key)}</span>` : '';
+          return `<li class="index-item" data-id="${entry.items[0].id}">
+            <button class="index-item-btn" type="button">
+              <span class="index-item-name">${escapeHtml(entry.label)}${sub}</span>
+              <span class="index-item-tags">${chips}</span>
+            </button>
+          </li>`;
+        }).join('')}
+      </ul>
+    </section>
+  `).join('');
+
+  jumpEl.querySelectorAll('.index-jump-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(`index-group-${encodeURIComponent(btn.dataset.jump)}`);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+  groupsEl.querySelectorAll('.index-item').forEach(li => {
+    li.addEventListener('click', () => {
+      const m = musicals.find(x => String(x.id) === String(li.dataset.id));
+      if (m) openModal(m);
+    });
+  });
+}
+
+function openTitleIndex() {
+  const section = document.getElementById('indexSection');
+  if (!section) return;
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchContainer').classList.remove('active');
+  document.getElementById('heroBanner').style.display = 'none';
+  document.getElementById('contentArea').style.display = 'none';
+  section.style.display = 'block';
+  const filterInput = document.getElementById('indexFilter');
+  if (filterInput) filterInput.value = '';
+  renderTitleIndex('');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function hideTitleIndex() {
+  const section = document.getElementById('indexSection');
+  if (!section) return;
+  section.style.display = 'none';
+}
+
+function closeTitleIndex() {
+  hideTitleIndex();
+  document.getElementById('heroBanner').style.display = '';
+  document.getElementById('contentArea').style.display = '';
+}
+
+function setupTitleIndex() {
+  const openBtn  = document.getElementById('indexBtn');
+  const closeBtn = document.getElementById('indexClose');
+  const filter   = document.getElementById('indexFilter');
+  if (openBtn)  openBtn.addEventListener('click', openTitleIndex);
+  if (closeBtn) closeBtn.addEventListener('click', closeTitleIndex);
+  if (filter) {
+    let timer;
+    filter.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => renderTitleIndex(filter.value), 180);
+    });
+  }
 }
 
 // ==========================================
@@ -1029,6 +1580,7 @@ function searchByHashtag(tag) {
 function resetView() {
   document.getElementById('searchInput').value = '';
   document.getElementById('searchContainer').classList.remove('active');
+  closeTitleIndex();
   hideSearchResults();
   currentFilter = 'all';
   document.querySelectorAll('.nav-links a').forEach(l => l.classList.remove('active'));
@@ -1208,19 +1760,36 @@ function setupRowNav(row) {
 // Card Component
 // ==========================================
 function createCardHTML(m) {
-  const hashtags = getLocalizedHashtags(m).slice(0, 3).map(h =>
-    `<span class="hashtag-sm" onclick="event.stopPropagation(); searchByHashtag('${h.replace(/'/g, "\\'")}')">${h}</span>`
+  // 카드에는 태그를 한 줄에 들어갈 만큼만 노출한다.
+  // 개수가 아니라 '글자 수'로 자르는 이유: 번역된 태그(#EnvironmentalSustainability)는
+  // 한국어 태그보다 훨씬 길어서, 3개 고정으로 두면 전부 말줄임만 남는다.
+  const allTags = getLocalizedHashtags(m);
+  const shownTags = [];
+  let tagBudget = 30;
+  for (const tag of allTags) {
+    if (shownTags.length >= 3) break;
+    if (shownTags.length > 0 && tagBudget - tag.length < 0) break;
+    shownTags.push(tag);
+    tagBudget -= tag.length;
+  }
+  const hashtags = shownTags.map(h =>
+    `<span class="hashtag-sm" title="${escapeHtml(h)}" onclick="event.stopPropagation(); searchByHashtag('${h.replace(/'/g, "\\'")}')">${escapeHtml(h)}</span>`
   ).join('');
+  const moreTags = allTags.length > shownTags.length
+    ? `<span class="hashtag-more" title="${escapeHtml(allTags.slice(shownTags.length).join(' '))}">+${allTags.length - shownTags.length}</span>`
+    : '';
 
+  const title = getLocalizedTitle(m);
   const thumbnailInner = m.thumbnail
-    ? `<img src="${m.thumbnail}" alt="${m.title} 포스터" class="card-poster" loading="lazy">`
-    : `<div class="card-pattern"></div><span class="card-title-display">${m.title}</span>`;
+    ? `<img src="${m.thumbnail}" alt="${escapeHtml(title)}" class="card-poster" loading="lazy">`
+    : `<div class="card-pattern"></div><span class="card-title-display">${escapeHtml(title)}</span>`;
 
   const thumbnailStyle = m.thumbnail
     ? ''
     : `style="background: linear-gradient(135deg, ${m.color}cc, ${m.color}44);"`;
 
   const catLabel = getCategoryLabel(m.category);
+  const catShort = getCategoryShortLabel(m.category);
   const catColor = getCategoryColor(m.category);
 
   return `
@@ -1229,12 +1798,12 @@ function createCardHTML(m) {
         ${thumbnailInner}
       </div>
       <div class="card-info">
-        <div class="card-info-title">${getLocalizedField(m, 'title')}</div>
+        <div class="card-info-title" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
         <div class="card-info-meta">
-          <span class="card-category-badge" style="background:${catColor}">${catLabel}</span>
-          <span>${m.curationYear}</span>
+          <span class="card-category-badge" style="background:${catColor}" title="${escapeHtml(catLabel)}">${escapeHtml(catShort)}</span>
+          <span class="card-year">${m.curationYear}</span>
         </div>
-        <div class="card-hashtags">${hashtags}</div>
+        <div class="card-hashtags">${hashtags}${moreTags}</div>
       </div>
     </div>
   `;
