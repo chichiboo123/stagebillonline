@@ -54,8 +54,13 @@ const translations = {
     'footer.description': '교실에서 시작하는 뮤지컬 수업',
     'nav.aiCuration': 'AI 큐레이션',
     'nav.more': '더보기',
-    'nav.index': '작품 색인',
-    'nav.indexTitle': '작품명으로 찾아보기',
+    'catalog.title': '작품 카탈로그',
+    'catalog.tab.title': '작품명순',
+    'catalog.tab.category': '카테고리별',
+    'catalog.sub.category': '카테고리별로 작품명을 모아 봅니다.',
+    'catalog.count.contents': '{n}개 콘텐츠',
+    'catalog.open.title': '작품명순으로 전체 보기',
+    'catalog.open.category': '카테고리별로 전체 보기',
     'index.title': '작품 색인',
     'index.sub': '작품명을 사전처럼 첫 글자별로 모아 봅니다.',
     'index.filter.ph': '작품명으로 좁히기...',
@@ -150,8 +155,13 @@ const translations = {
     'footer.description': 'Musical Class Starts in the Classroom',
     'nav.aiCuration': 'AI Curation',
     'nav.more': 'More',
-    'nav.index': 'Title Index',
-    'nav.indexTitle': 'Browse by title',
+    'catalog.title': 'Catalog',
+    'catalog.tab.title': 'By Title',
+    'catalog.tab.category': 'By Category',
+    'catalog.sub.category': 'Every work grouped by category.',
+    'catalog.count.contents': '{n} contents',
+    'catalog.open.title': 'Browse all by title',
+    'catalog.open.category': 'Browse all by category',
     'index.title': 'Title Index',
     'index.sub': 'Every work gathered by first letter, like a dictionary.',
     'index.filter.ph': 'Filter by title...',
@@ -246,8 +256,13 @@ const translations = {
     'footer.description': '教室から始まるミュージカル授業',
     'nav.aiCuration': 'AIキュレーション',
     'nav.more': 'もっと見る',
-    'nav.index': '作品インデックス',
-    'nav.indexTitle': '作品名から探す',
+    'catalog.title': '作品カタログ',
+    'catalog.tab.title': '作品名順',
+    'catalog.tab.category': 'カテゴリ別',
+    'catalog.sub.category': 'カテゴリごとに作品名をまとめて見られます。',
+    'catalog.count.contents': '{n}件のコンテンツ',
+    'catalog.open.title': '作品名順で全部見る',
+    'catalog.open.category': 'カテゴリ別で全部見る',
     'index.title': '作品インデックス',
     'index.sub': '作品名を辞書のように頭文字ごとにまとめて見られます。',
     'index.filter.ph': '作品名で絞り込み...',
@@ -780,12 +795,7 @@ function applyI18n() {
   // Re-render content if already loaded
   if (musicals.length > 0) {
     renderContentRows(currentFilter);
-    if (isTitleIndexOpen()) {
-      const idxFilter = document.getElementById('indexFilter');
-      renderTitleIndex(idxFilter ? idxFilter.value : '');
-      document.getElementById('contentArea').style.display = 'none';
-      document.getElementById('heroBanner').style.display = 'none';
-    }
+    if (isCatalogOpen()) renderCatalog();
     if (currentHeroMusical) {
       refreshHeroText(currentHeroMusical);
     }
@@ -823,7 +833,7 @@ const LANG_SHORT = { ko: 'KO', en: 'EN', ja: 'JP' };
 
 // 열려 있는 모든 네비 드롭다운을 닫음
 function closeAllNavDropdowns() {
-  document.querySelectorAll('.lang-dropdown.open, .nav-more.open, .nav-cat-more.open').forEach(el => {
+  document.querySelectorAll('.lang-dropdown.open, .nav-cat-more.open').forEach(el => {
     el.classList.remove('open');
     const trigger = el.querySelector('[aria-expanded]');
     if (trigger) trigger.setAttribute('aria-expanded', 'false');
@@ -872,28 +882,6 @@ function setupLangSwitcher() {
   });
 
   syncActive();
-}
-
-function setupNavMore() {
-  const navMore = document.getElementById('navMore');
-  const moreBtn = document.getElementById('navMoreBtn');
-  const menu    = document.getElementById('navMoreMenu');
-  if (!navMore || !moreBtn) return;
-
-  moreBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleNavDropdown(navMore);
-  });
-  menu.addEventListener('click', (e) => e.stopPropagation());
-
-  const actionMap = { ai: 'aiCurationBtn', index: 'indexBtn', upload: 'uploadBtn', about: 'aboutBtn' };
-  document.querySelectorAll('.nav-more-item').forEach(item => {
-    item.addEventListener('click', () => {
-      closeAllNavDropdowns();
-      const target = document.getElementById(actionMap[item.dataset.action]);
-      if (target) target.click();
-    });
-  });
 }
 
 // 바깥 클릭 / ESC 로 드롭다운 닫기
@@ -1025,7 +1013,6 @@ function initApp() {
   setupNavbar();
   setupSearch();
   setupLangSwitcher();
-  setupNavMore();
   setRandomHero();
   setupHeroAutoRotation();
   renderContentRows('all');
@@ -1033,7 +1020,7 @@ function initApp() {
   setupUpload();
   setupAICuration();
   setupAbout();
-  setupTitleIndex();
+  setupCatalog();
   applyI18n();
   stagebillTranslationReport();
 }
@@ -1058,10 +1045,9 @@ function setupNavbar() {
     link.classList.add('active');
     currentFilter = filter;
 
-    // Close search results / 색인 화면
+    // Close search results
     document.getElementById('searchResults').style.display = 'none';
     document.getElementById('searchInput').value = '';
-    hideTitleIndex();
     document.getElementById('heroBanner').style.display = '';
     document.getElementById('contentArea').style.display = '';
 
@@ -1162,7 +1148,6 @@ function showSearchResults(results, query) {
 
   document.getElementById('heroBanner').style.display = 'none';
   document.getElementById('contentArea').style.display = 'none';
-  hideTitleIndex();
   section.style.display = 'block';
 
   const countLabel = currentLang === 'en'
@@ -1186,7 +1171,6 @@ function showSearchResults(results, query) {
 
 function hideSearchResults() {
   document.getElementById('searchResults').style.display = 'none';
-  if (isTitleIndexOpen()) return; // 색인 화면이 떠 있으면 히어로를 되살리지 않는다
   document.getElementById('heroBanner').style.display = '';
   document.getElementById('contentArea').style.display = '';
 }
@@ -1319,120 +1303,205 @@ function groupTitleIndexEntries(entries) {
     }));
 }
 
-function isTitleIndexOpen() {
-  const el = document.getElementById('indexSection');
-  return !!el && el.style.display !== 'none';
+let catalogTab = 'title';           // 'title' | 'category'
+let modalOpenedFromCatalog = false;  // 카탈로그에서 상세로 들어갔는지
+
+function isCatalogOpen() {
+  const el = document.getElementById('catalogOverlay');
+  return !!el && el.classList.contains('active');
 }
 
-function renderTitleIndex(filterText = '') {
-  const section = document.getElementById('indexSection');
-  if (!section) return;
-  const jumpEl   = document.getElementById('indexJump');
-  const groupsEl = document.getElementById('indexGroups');
-  const countEl  = document.getElementById('indexCount');
-
+// 필터(작품명 일부 / 초성)를 적용한 항목 목록
+function filterIndexEntries(entries, filterText) {
   const q = String(filterText || '').trim().toLowerCase();
-  let entries = buildTitleIndexEntries();
-  if (q) {
-    const chosungQuery = /^[ㄱ-ㅎ]+$/.test(q) ? toChosungString(q) : '';
-    entries = entries.filter(e => {
-      // 'ㅂㄹ' 처럼 초성만 입력하면 초성으로 찾는다 (사전식 검색).
-      // 색인이므로 '포함'이 아니라 '시작'으로 맞춰야 점프바와 결과가 어긋나지 않는다.
-      if (chosungQuery &&
-          (toChosungString(e.label).startsWith(chosungQuery) || toChosungString(e.key).startsWith(chosungQuery))) return true;
-      return e.label.toLowerCase().includes(q) ||
-        e.key.toLowerCase().includes(q) ||
-        e.items.some(m => ['title_en', 'title_ja', 'title_jp']
-          .some(f => String(m[f] || '').toLowerCase().includes(q)));
-    });
-  }
-  const groups = groupTitleIndexEntries(entries);
+  if (!q) return entries;
+  const chosungQuery = /^[ㄱ-ㅎ]+$/.test(q) ? toChosungString(q) : '';
+  return entries.filter(e => {
+    // 'ㅂㄹ' 처럼 초성만 입력하면 초성으로 찾는다 (사전식 검색).
+    // 색인이므로 '포함'이 아니라 '시작'으로 맞춰야 점프바와 결과가 어긋나지 않는다.
+    if (chosungQuery &&
+        (toChosungString(e.label).startsWith(chosungQuery) || toChosungString(e.key).startsWith(chosungQuery))) return true;
+    return e.label.toLowerCase().includes(q) ||
+      e.key.toLowerCase().includes(q) ||
+      e.items.some(m => ['title_en', 'title_ja', 'title_jp']
+        .some(f => String(m[f] || '').toLowerCase().includes(q)));
+  });
+}
 
-  countEl.textContent = t('index.count').replace('{n}', entries.length);
+// 항목 한 줄 (작품명 + 원제 + 카테고리 칩)
+function catalogItemHTML(entry, opts = {}) {
+  const cats = opts.hideChips
+    ? []
+    : [...new Set(entry.items.map(m => m.category).filter(Boolean))];
+  const chips = cats.map(c =>
+    `<span class="index-cat-chip" style="background:${getCategoryColor(c)}" title="${escapeHtml(getCategoryLabel(c))}">${escapeHtml(getCategoryShortLabel(c))}</span>`
+  ).join('');
+  const sub = entry.label !== entry.key ? `<span class="index-item-sub">${escapeHtml(entry.key)}</span>` : '';
+  const id = (opts.item || entry.items[0]).id;
+  return `<li class="index-item" data-id="${id}">
+    <button class="index-item-btn" type="button">
+      <span class="index-item-name">${escapeHtml(entry.label)}${sub}</span>
+      <span class="index-item-tags">${chips}</span>
+    </button>
+  </li>`;
+}
+
+// 탭 1 — 작품명순 (첫 글자 그룹 + 점프바)
+function renderCatalogByTitle(entries) {
+  const groups = groupTitleIndexEntries(entries);
+  const jump = groups.map(g =>
+    `<button class="index-jump-btn" type="button" data-jump="${escapeHtml(g.key)}">${escapeHtml(g.key)}</button>`
+  ).join('');
+  const body = groups.map(g => `
+    <section class="index-group" id="catalog-group-${encodeURIComponent(g.key)}">
+      <h3 class="index-group-key">${escapeHtml(g.key)}<span class="index-group-num">${g.entries.length}</span></h3>
+      <ul class="index-list">${g.entries.map(e => catalogItemHTML(e)).join('')}</ul>
+    </section>`).join('');
+  return { jump, body };
+}
+
+// 탭 2 — 카테고리별 (카테고리마다 작품명 가나다순)
+function renderCatalogByCategory(entries) {
+  const tag = localeTag();
+  // 데이터 등장 순서를 유지해 내비 카테고리 순서와 맞춘다
+  const order = [...new Set(musicals.map(m => m.category).filter(Boolean))];
+  const byCat = new Map(order.map(c => [c, []]));
+  entries.forEach(entry => {
+    entry.items.forEach(m => {
+      if (!m.category) return;
+      if (!byCat.has(m.category)) byCat.set(m.category, []);
+      byCat.get(m.category).push({ ...entry, item: m });
+    });
+  });
+
+  const groups = [...byCat.entries()]
+    .filter(([, list]) => list.length > 0)
+    .map(([cat, list]) => ({
+      cat,
+      list: list.sort((a, b) => a.label.localeCompare(b.label, tag)),
+    }));
+
+  const jump = groups.map(g =>
+    `<button class="index-jump-btn index-jump-cat" type="button" data-jump="${escapeHtml(g.cat)}" title="${escapeHtml(getCategoryLabel(g.cat))}">
+      <span class="index-jump-dot" style="background:${getCategoryColor(g.cat)}"></span>${escapeHtml(getCategoryShortLabel(g.cat))}
+    </button>`).join('');
+
+  const body = groups.map(g => `
+    <section class="index-group index-group-cat" id="catalog-group-${encodeURIComponent(g.cat)}">
+      <h3 class="index-group-key index-group-key-cat">
+        <span class="index-group-dot" style="background:${getCategoryColor(g.cat)}"></span>
+        <span class="index-group-catname">${escapeHtml(getCategoryLabel(g.cat))}</span>
+        <span class="index-group-num">${g.list.length}</span>
+      </h3>
+      <ul class="index-list">${g.list.map(e => catalogItemHTML(e, { hideChips: true, item: e.item })).join('')}</ul>
+    </section>`).join('');
+  return { jump, body };
+}
+
+function renderCatalog() {
+  const overlay = document.getElementById('catalogOverlay');
+  if (!overlay) return;
+  const jumpEl    = document.getElementById('catalogJump');
+  const contentEl = document.getElementById('catalogContent');
+  const countEl   = document.getElementById('catalogCount');
+  const subEl     = document.getElementById('catalogSub');
+  const filterEl  = document.getElementById('catalogFilter');
+
+  const entries = filterIndexEntries(buildTitleIndexEntries(), filterEl ? filterEl.value : '');
+
+  subEl.textContent = catalogTab === 'category' ? t('catalog.sub.category') : t('index.sub');
+  countEl.textContent = catalogTab === 'category'
+    ? t('catalog.count.contents').replace('{n}', entries.reduce((n, e) => n + e.items.length, 0))
+    : t('index.count').replace('{n}', entries.length);
+
+  document.querySelectorAll('.catalog-tab').forEach(tab => {
+    const on = tab.dataset.tab === catalogTab;
+    tab.classList.toggle('active', on);
+    tab.setAttribute('aria-selected', String(on));
+  });
 
   if (entries.length === 0) {
     jumpEl.innerHTML = '';
-    groupsEl.innerHTML = `<p class="index-empty">${t('index.empty')}</p>`;
+    contentEl.innerHTML = `<p class="index-empty">${t('index.empty')}</p>`;
     return;
   }
 
-  jumpEl.innerHTML = groups.map(g =>
-    `<button class="index-jump-btn" type="button" data-jump="${escapeHtml(g.key)}">${escapeHtml(g.key)}</button>`
-  ).join('');
-
-  groupsEl.innerHTML = groups.map(g => `
-    <section class="index-group" id="index-group-${encodeURIComponent(g.key)}">
-      <h3 class="index-group-key">${escapeHtml(g.key)}<span class="index-group-num">${g.entries.length}</span></h3>
-      <ul class="index-list">
-        ${g.entries.map(entry => {
-          const cats = [...new Set(entry.items.map(m => m.category).filter(Boolean))];
-          const chips = cats.map(c =>
-            `<span class="index-cat-chip" style="background:${getCategoryColor(c)}" title="${escapeHtml(getCategoryLabel(c))}">${escapeHtml(getCategoryShortLabel(c))}</span>`
-          ).join('');
-          const sub = entry.label !== entry.key ? `<span class="index-item-sub">${escapeHtml(entry.key)}</span>` : '';
-          return `<li class="index-item" data-id="${entry.items[0].id}">
-            <button class="index-item-btn" type="button">
-              <span class="index-item-name">${escapeHtml(entry.label)}${sub}</span>
-              <span class="index-item-tags">${chips}</span>
-            </button>
-          </li>`;
-        }).join('')}
-      </ul>
-    </section>
-  `).join('');
+  const { jump, body } = catalogTab === 'category'
+    ? renderCatalogByCategory(entries)
+    : renderCatalogByTitle(entries);
+  jumpEl.innerHTML = jump;
+  contentEl.innerHTML = body;
 
   jumpEl.querySelectorAll('.index-jump-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const target = document.getElementById(`index-group-${encodeURIComponent(btn.dataset.jump)}`);
+      const target = document.getElementById(`catalog-group-${encodeURIComponent(btn.dataset.jump)}`);
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
-  groupsEl.querySelectorAll('.index-item').forEach(li => {
+  contentEl.querySelectorAll('.index-item').forEach(li => {
     li.addEventListener('click', () => {
       const m = musicals.find(x => String(x.id) === String(li.dataset.id));
-      if (m) openModal(m);
+      if (m) {
+        modalOpenedFromCatalog = true;
+        openModal(m);
+      }
     });
   });
 }
 
-function openTitleIndex() {
-  const section = document.getElementById('indexSection');
-  if (!section) return;
-  document.getElementById('searchResults').style.display = 'none';
-  document.getElementById('searchInput').value = '';
-  document.getElementById('searchContainer').classList.remove('active');
-  document.getElementById('heroBanner').style.display = 'none';
-  document.getElementById('contentArea').style.display = 'none';
-  section.style.display = 'block';
-  const filterInput = document.getElementById('indexFilter');
-  if (filterInput) filterInput.value = '';
-  renderTitleIndex('');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+function openCatalog(tab) {
+  const overlay = document.getElementById('catalogOverlay');
+  if (!overlay) return;
+  catalogTab = (tab === 'category') ? 'category' : 'title';
+  const filterEl = document.getElementById('catalogFilter');
+  if (filterEl) filterEl.value = '';
+  renderCatalog();
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  const body = document.getElementById('catalogBody');
+  if (body) body.scrollTop = 0;
+  // 데스크톱에서만 필터에 포커스 — 모바일은 키보드가 바로 올라와 목록을 가린다
+  if (filterEl && window.matchMedia('(min-width: 769px)').matches) filterEl.focus();
 }
 
-function hideTitleIndex() {
-  const section = document.getElementById('indexSection');
-  if (!section) return;
-  section.style.display = 'none';
+function closeCatalog() {
+  const overlay = document.getElementById('catalogOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('active');
+  overlay.style.zIndex = '';
+  document.body.style.overflow = '';
 }
 
-function closeTitleIndex() {
-  hideTitleIndex();
-  document.getElementById('heroBanner').style.display = '';
-  document.getElementById('contentArea').style.display = '';
-}
+function setupCatalog() {
+  const overlay  = document.getElementById('catalogOverlay');
+  const closeBtn = document.getElementById('catalogClose');
+  const filter   = document.getElementById('catalogFilter');
+  if (!overlay) return;
 
-function setupTitleIndex() {
-  const openBtn  = document.getElementById('indexBtn');
-  const closeBtn = document.getElementById('indexClose');
-  const filter   = document.getElementById('indexFilter');
-  if (openBtn)  openBtn.addEventListener('click', openTitleIndex);
-  if (closeBtn) closeBtn.addEventListener('click', closeTitleIndex);
+  if (closeBtn) closeBtn.addEventListener('click', closeCatalog);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeCatalog(); });
+
+  document.querySelectorAll('.catalog-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      catalogTab = tab.dataset.tab;
+      renderCatalog();
+      const body = document.getElementById('catalogBody');
+      if (body) body.scrollTop = 0;
+    });
+  });
+
   if (filter) {
     let timer;
     filter.addEventListener('input', () => {
       clearTimeout(timer);
-      timer = setTimeout(() => renderTitleIndex(filter.value), 180);
+      timer = setTimeout(renderCatalog, 180);
+    });
+    filter.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && filter.value) {
+        e.stopPropagation();
+        filter.value = '';
+        renderCatalog();
+      }
     });
   }
 }
@@ -1569,6 +1638,9 @@ function setupHeroAutoRotation() {
 }
 
 function searchByHashtag(tag) {
+  // 카탈로그에서 연 상세 모달의 해시태그로 들어올 수 있다.
+  // 카탈로그를 닫지 않으면 검색 결과가 오버레이 뒤에 가려진다.
+  closeCatalog();
   const input = document.getElementById('searchInput');
   const container = document.getElementById('searchContainer');
   container.classList.add('active');
@@ -1578,9 +1650,9 @@ function searchByHashtag(tag) {
 }
 
 function resetView() {
+  closeCatalog();
   document.getElementById('searchInput').value = '';
   document.getElementById('searchContainer').classList.remove('active');
-  closeTitleIndex();
   hideSearchResults();
   currentFilter = 'all';
   document.querySelectorAll('.nav-links a').forEach(l => l.classList.remove('active'));
@@ -1616,23 +1688,29 @@ function createStatsBar() {
   const unit = (langPack['stats.unit'] != null) ? langPack['stats.unit'] : (translations['ko']['stats.unit'] || '');
   const bar = document.createElement('div');
   bar.className = 'stats-bar fade-in';
+  // 각 항목은 버튼 — 누르면 작품 카탈로그가 해당 탭으로 열린다
   bar.innerHTML = `
-    <div class="stat-item">
+    <button class="stat-item" type="button" data-catalog-tab="title" title="${escapeHtml(t('catalog.open.title'))}">
       <svg class="stat-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2,16.5C2,19.54,4.46,22,7.5,22s5.5-2.46,5.5-5.5V10H2V16.5z M7.5,18.5C6.12,18.5,5,17.83,5,17h5C10,17.83,8.88,18.5,7.5,18.5z M10,13c0.55,0,1,0.45,1,1c0,0.55-0.45,1-1,1s-1-0.45-1-1C9,13.45,9.45,13,10,13z M5,13c0.55,0,1,0.45,1,1c0,0.55-0.45,1-1,1s-1-0.45-1-1C4,13.45,4.45,13,5,13z"/><path d="M11,3v6h3v2.5c0-0.83,1.12-1.5,2.5-1.5c1.38,0,2.5,0.67,2.5,1.5h-5V14v0.39c0.75,0.38,1.6,0.61,2.5,0.61c3.04,0,5.5-2.46,5.5-5.5V3H11z M14,8.08c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C15,7.64,14.55,8.08,14,8.08z M19,8.08c-0.55,0-1-0.45-1-1c0-0.55,0.45-1,1-1s1,0.45,1,1C20,7.64,19.55,8.08,19,8.08z"/></svg>
       <span class="stat-text">
         <span class="stat-label">${t('stats.works')}</span>
         <span class="stat-value"><span class="stat-num" data-count="${workCount}">0</span>${unit}</span>
       </span>
-    </div>
+      <svg class="stat-cta" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+    </button>
     <span class="stat-divider" aria-hidden="true"></span>
-    <div class="stat-item">
+    <button class="stat-item" type="button" data-catalog-tab="category" title="${escapeHtml(t('catalog.open.category'))}">
       <svg class="stat-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>
       <span class="stat-text">
         <span class="stat-label">${t('stats.contents')}</span>
         <span class="stat-value"><span class="stat-num" data-count="${contentCount}">0</span>${unit}</span>
       </span>
-    </div>
+      <svg class="stat-cta" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+    </button>
   `;
+  bar.querySelectorAll('.stat-item').forEach(btn => {
+    btn.addEventListener('click', () => openCatalog(btn.dataset.catalogTab));
+  });
   return bar;
 }
 
@@ -1835,6 +1913,7 @@ function setupModal() {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (document.getElementById('modalOverlay').classList.contains('active')) { closeModal(); return; }
+    if (isCatalogOpen())                                                      { closeCatalog(); return; }
     if (document.getElementById('aiOverlay').classList.contains('active'))     { closeAICuration(); return; }
     if (document.getElementById('uploadOverlay').classList.contains('active')) { closeUpload(); return; }
     if (document.getElementById('aboutOverlay').classList.contains('active'))  { closeAbout(); }
@@ -1849,7 +1928,10 @@ function setupModal() {
       if (modalOpenedFromAI) {
         modalOpenedFromAI = false;
         document.getElementById('aiOverlay').style.zIndex = '';
+      } else if (modalOpenedFromCatalog && isCatalogOpen()) {
+        modalOpenedFromCatalog = false;
       } else {
+        modalOpenedFromCatalog = false;
         document.body.style.overflow = '';
       }
     }
@@ -2020,7 +2102,11 @@ function closeModal() {
     const aiOverlay = document.getElementById('aiOverlay');
     aiOverlay.style.zIndex = ''; // 원래 z-index로 복원
     // 모달은 body overflow를 hidden으로 두었음. AI 오버레이도 열려 있으므로 유지
+  } else if (modalOpenedFromCatalog && isCatalogOpen()) {
+    // 카탈로그에서 들어온 경우: 카탈로그가 그대로 보이도록 스크롤 잠금 유지
+    modalOpenedFromCatalog = false;
   } else {
+    modalOpenedFromCatalog = false;
     document.body.style.overflow = '';
   }
   history.back();
@@ -2104,6 +2190,8 @@ function setupAICuration() {
   const errorRetryBtn = document.getElementById('aiErrorRetryBtn');
 
   btn.addEventListener('click', openAICuration);
+  const miniBtn = document.getElementById('aiMiniBtn');
+  if (miniBtn) miniBtn.addEventListener('click', openAICuration);
   closeBtn.addEventListener('click', closeAICuration);
   submitBtn.addEventListener('click', submitAICuration);
   retryBtn.addEventListener('click', resetAICuration);

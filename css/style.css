@@ -350,75 +350,39 @@ body {
   flex-shrink: 0;
 }
 
-/* ========== Title Index Button (A–Z) ========== */
-.index-btn {
+/* ========== Nav Icon Buttons (업로드 / 소개 / 모바일 AI) ========== */
+.nav-icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: none;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   cursor: pointer;
-  padding: 5px;
-  border-radius: 6px;
+  padding: 6px;
+  border-radius: 7px;
   flex-shrink: 0;
   transition: background var(--transition), color var(--transition);
 }
-.index-btn:hover { background: rgba(255,255,255,0.1); color: var(--accent); }
+.nav-icon-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+.nav-icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* ========== Nav Overflow Menu (⋯) ========== */
-.nav-more {
-  display: none;
-  position: relative;
-  flex-shrink: 0;
+/* AI 아이콘은 데스크톱에서 숨김 (우측 라벨 버튼이 그 역할) */
+.nav-icon-ai { display: none; color: var(--accent); }
+.nav-icon-ai:hover { color: var(--accent-hover); }
+@media (max-width: 768px) {
+  .nav-icon-ai { display: flex; }
 }
-.nav-more-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  cursor: pointer;
-  padding: 5px;
-  border-radius: 6px;
-  transition: background var(--transition);
+
+/* 아주 좁은 화면(≤400px): 로고·아이콘을 줄여 상단 아이콘이 잘리지 않게 */
+@media (max-width: 400px) {
+  .logo { font-size: 1rem; letter-spacing: 0.5px; }
+  .nav-right { gap: 3px; }
+  .nav-icon-btn { padding: 3px; }
+  .nav-icon-btn svg { width: 17px; height: 17px; }
+  .lang-current { font-size: 0.62rem; padding: 4px 5px 4px 7px; }
+  .search-btn svg { width: 20px; height: 20px; }
 }
-.nav-more-btn:hover { background: rgba(255,255,255,0.1); }
-.nav-more.open .nav-more-btn { background: rgba(255,255,255,0.13); }
-.nav-more-menu {
-  display: none;
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 168px;
-  background: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 10px;
-  padding: 5px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.55);
-  z-index: 1100;
-}
-.nav-more.open .nav-more-menu { display: block; }
-.nav-more-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-align: left;
-  padding: 10px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.nav-more-item:hover { background: rgba(255,255,255,0.08); }
-.nav-more-item svg { flex-shrink: 0; color: var(--accent); }
 
 /* ========== Search ========== */
 .search-container {
@@ -511,7 +475,10 @@ body {
 .hero-content {
   position: relative;
   z-index: 3;
-  padding: 0 4% 8%;
+  /* 하단 여백을 폭 비례(%)로만 두면 좁은 데스크톱에서 여백이 줄어드는데,
+     .content-area 는 -80px 로 고정 오버랩이라 통계 바가 히어로 버튼을 덮었다.
+     최소값을 고정해 어떤 폭에서도 겹치지 않게 한다. */
+  padding: 0 4% max(8%, 118px);
   max-width: 700px;
 }
 
@@ -650,13 +617,18 @@ body {
   padding-bottom: 60px;
 }
 
-/* ── Catalog stats (게시 작품 수 / 콘텐츠 수) ── */
+/* ── Catalog stats (게시 작품 수 / 콘텐츠 수) — 누르면 카탈로그 팝업 ── */
 .stats-bar {
-  display: inline-flex;
-  align-items: center;
-  gap: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 6px;
+  /* inline-flex + margin 4% 는 좁은 화면에서 폭이 고정돼 넘치기 쉬웠다.
+     max-width 를 걸어 뷰포트 안에서만 자라도록 한다. */
+  width: fit-content;
+  max-width: calc(100% - 8%);
   margin: 0 4% 28px;
-  padding: 13px 24px;
+  padding: 6px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
@@ -668,12 +640,25 @@ body {
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 11px;
+  min-width: 0;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
 }
+.stat-item:hover { background: rgba(255,255,255,0.09); }
+.stat-item:hover .stat-cta { opacity: 1; transform: translateX(2px); }
+.stat-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .stat-icon {
-  width: 26px;
-  height: 26px;
+  width: 25px;
+  height: 25px;
   flex-shrink: 0;
   color: var(--accent);
 }
@@ -682,6 +667,7 @@ body {
   display: flex;
   flex-direction: column;
   line-height: 1.2;
+  min-width: 0;
 }
 
 .stat-label {
@@ -689,35 +675,62 @@ body {
   color: var(--text-secondary);
   letter-spacing: 0.5px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-value {
-  font-size: 1.4rem;
+  font-size: 1.35rem;
   font-weight: 800;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .stat-num {
   font-variant-numeric: tabular-nums;
 }
 
+.stat-cta {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  opacity: 0.5;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
 .stat-divider {
   width: 1px;
-  height: 36px;
+  align-self: center;
+  height: 32px;
   background: rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
 }
 
 @media (max-width: 600px) {
-  .stats-bar {
-    gap: 16px;
-    padding: 11px 18px;
-    margin-bottom: 22px;
-  }
-  .stat-icon { width: 22px; height: 22px; }
-  .stat-item { gap: 9px; }
-  .stat-value { font-size: 1.2rem; }
+  .stats-bar { margin-bottom: 22px; }
+  .stat-icon { width: 21px; height: 21px; }
+  .stat-item { gap: 9px; padding: 7px 10px; }
+  .stat-value { font-size: 1.15rem; }
   .stat-label { font-size: 0.68rem; }
-  .stat-divider { height: 30px; }
+  .stat-divider { height: 28px; }
+  .stat-cta { display: none; }
+}
+
+/* 아주 좁은 화면: 두 항목을 세로로 쌓고 구분선은 가로줄로 */
+@media (max-width: 400px) {
+  .stats-bar {
+    width: auto;
+    max-width: calc(100% - 8%);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+  }
+  .stat-item { justify-content: flex-start; }
+  .stat-divider {
+    width: auto;
+    height: 1px;
+    align-self: stretch;
+    margin: 0 12px;
+  }
 }
 
 .content-row {
@@ -943,41 +956,111 @@ body {
   flex-shrink: 0;
 }
 
-/* ========== Title Index (사전형 색인) ========== */
-.index-section {
-  position: relative;
-  z-index: 5;
-  padding: 100px 4% 60px;
+/* ========== 작품 카탈로그 팝업 (게시 현황 버튼 → 색인/카테고리별) ========== */
+.catalog-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1800;
+  padding: 4vh 16px;
+  overflow: hidden;
 }
-
-.index-header {
+.catalog-overlay.active {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
 }
 
-.index-title {
-  font-size: 1.6rem;
+.catalog-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(940px, 100%);
+  max-height: 92vh;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.7);
+  overflow: hidden;
+}
+
+.catalog-header {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 22px 24px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
+}
+
+.catalog-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.9rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+.catalog-close:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+
+.catalog-title {
+  font-size: 1.35rem;
   font-weight: 900;
   letter-spacing: -0.5px;
+  padding-right: 40px;
 }
 
-.index-sub {
-  margin-top: 4px;
-  font-size: 0.85rem;
+.catalog-sub {
+  margin-top: 3px;
+  font-size: 0.82rem;
   color: var(--text-secondary);
 }
 
-.index-tools {
+.catalog-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 4px;
+  width: fit-content;
+  max-width: 100%;
+}
+.catalog-tab {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 7px 16px;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.catalog-tab:hover { color: var(--text-primary); }
+.catalog-tab.active { background: var(--accent); color: #fff; }
+
+.catalog-tools {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 12px;
 }
 
-.index-filter {
+.catalog-filter {
+  flex: 1;
+  min-width: 0;
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 18px;
@@ -985,47 +1068,41 @@ body {
   font-family: inherit;
   font-size: 0.85rem;
   padding: 8px 14px;
-  width: 210px;
   outline: none;
   transition: border-color var(--transition), background var(--transition);
 }
-.index-filter::placeholder { color: var(--text-muted); }
-.index-filter:focus { border-color: var(--accent); background: rgba(255,255,255,0.12); }
+.catalog-filter::placeholder { color: var(--text-muted); }
+.catalog-filter:focus { border-color: var(--accent); background: rgba(255,255,255,0.12); }
 
-.index-count {
+.catalog-count {
   font-size: 0.8rem;
   color: var(--text-muted);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.index-close {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 1.7rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0 4px;
-  transition: color var(--transition);
+.catalog-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 24px 24px;
 }
-.index-close:hover { color: var(--text-primary); }
 
-/* 상단 점프바 (ㄱㄴㄷ / A-Z / あかさ) */
-.index-jump {
+/* 점프바 (ㄱㄴㄷ / A-Z / あかさ / 카테고리) */
+.catalog-jump {
   position: sticky;
-  top: var(--nav-height);
-  z-index: 6;
+  top: 0;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 10px 0;
-  margin-bottom: 8px;
-  background: linear-gradient(to bottom, var(--bg-primary) 70%, transparent);
+  padding: 14px 0 12px;
+  background: var(--bg-secondary);
 }
 
 .index-jump-btn {
   min-width: 30px;
-  padding: 5px 8px;
+  padding: 5px 9px;
   background: rgba(255,255,255,0.07);
   border: none;
   border-radius: 6px;
@@ -1038,6 +1115,22 @@ body {
 }
 .index-jump-btn:hover { background: var(--accent); color: #fff; }
 
+.index-jump-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.index-jump-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 /* 사전처럼 왼쪽에 글자, 오른쪽에 그 글자로 시작하는 작품들 */
 .index-group {
   display: grid;
@@ -1046,8 +1139,12 @@ body {
   align-items: start;
   padding: 10px 0;
   border-bottom: 1px solid rgba(255,255,255,0.07);
-  scroll-margin-top: calc(var(--nav-height) + 62px);
+  scroll-margin-top: 54px;
 }
+.index-group:last-child { border-bottom: none; }
+
+/* 카테고리 탭은 라벨이 길어 왼쪽 칸을 넓게 */
+.index-group-cat { grid-template-columns: 170px 1fr; }
 
 .index-group-key {
   display: flex;
@@ -1061,16 +1158,39 @@ body {
   line-height: 1.1;
 }
 
+.index-group-key-cat {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  min-width: 0;
+  padding-top: 10px;
+}
+.index-group-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+/* 카테고리명은 자르지 않고 줄바꿈 — 이름이 길어도 온전히 읽히게 */
+.index-group-catname {
+  min-width: 0;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
 .index-group-num {
   font-size: 0.68rem;
   font-weight: 600;
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .index-list {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 2px 10px;
 }
 
@@ -1085,7 +1205,7 @@ body {
   border-radius: 6px;
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   text-align: left;
   padding: 7px 10px;
   cursor: pointer;
@@ -1132,19 +1252,23 @@ body {
 }
 
 @media (max-width: 768px) {
-  .index-section { padding: 116px 4% 40px; }
-  .index-title { font-size: 1.3rem; }
-  .index-header { align-items: flex-start; }
-  .index-tools { width: 100%; }
-  .index-filter { flex: 1; width: auto; }
-  /* 모바일은 내비가 2줄이므로 점프바를 그 아래에 고정 */
-  .index-jump { top: 92px; }
-  .index-group {
-    grid-template-columns: 1fr;
-    scroll-margin-top: 150px;
+  .catalog-overlay { padding: 0; }
+  .catalog-modal {
+    width: 100%;
+    max-height: 100%;
+    height: 100%;
+    border-radius: 0;
+    border: none;
   }
+  .catalog-header { padding: 18px 16px 12px; }
+  .catalog-title { font-size: 1.15rem; }
+  .catalog-body { padding: 0 16px 20px; }
+  .catalog-tools { flex-wrap: wrap; gap: 8px 10px; }
+  .index-group,
+  .index-group-cat { grid-template-columns: 1fr; }
   .index-group-key { flex-direction: row; align-items: baseline; gap: 6px; padding-top: 0; }
   .index-list { grid-template-columns: 1fr; }
+  .index-jump-cat { max-width: 130px; }
 }
 
 /* ========== Search Results ========== */
@@ -1870,9 +1994,6 @@ body {
     gap: 12px;
   }
 
-  .index-section { padding: 106px 4% 36px; }
-  .index-jump { top: 86px; }
-  .index-group { scroll-margin-top: 140px; }
 }
 
 /* ========== Landscape Mode (phone horizontal) ========== */
@@ -1995,29 +2116,6 @@ body {
 /* ==========================================
    Upload Button & Modal
    ========================================== */
-
-/* ── 업로드 버튼 ──────────────────────────────────── */
-.upload-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--transition);
-  white-space: nowrap;
-  flex-shrink: 0;
-  align-self: center;
-}
-.upload-btn:hover { background: var(--accent-hover); }
-
-/* '업로드'도 모든 화면에서 ⋯ 메뉴로 통합 (버튼은 클릭 대상으로만 남김) */
-.upload-btn { display: none; }
 
 /* ── 업로드 오버레이 (전체화면 팝업) ──────────────── */
 .upload-overlay {
@@ -2739,34 +2837,6 @@ details.upload-details { margin-top: 4px; }
   .ai-target-grid { grid-template-columns: repeat(2, 1fr); }
   .ai-export-btn span { font-size: 0.78rem; }
 }
-
-/* ── 소개 버튼 (네비) ─────────────────────────────────────── */
-.about-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-  white-space: nowrap;
-  flex-shrink: 0;
-  align-self: center;
-}
-.about-btn:hover {
-  background: rgba(255,255,255,0.06);
-  color: var(--text-primary);
-  border-color: rgba(255,255,255,0.35);
-}
-/* 상단 정보 과부하를 줄이기 위해 '소개'는 모든 화면에서 ⋯ 메뉴로 통합한다.
-   (버튼 자체는 ⋯ 메뉴가 클릭 대상으로 사용하므로 DOM에 남겨둔다) */
-.about-btn { display: none; }
-.nav-more { display: block; }
 
 /* ── 소개 오버레이 / 모달 ─────────────────────────────────── */
 .about-overlay {
