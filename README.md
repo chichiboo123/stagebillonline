@@ -242,6 +242,34 @@ npx serve .
 ### Apps Script checkVersion()
 에디터에서 `checkVersion()` 함수를 ▶ 실행하면 로그에 현재 코드 버전·키 설정 상태·스프레드시트 정보가 찍힙니다.
 
+### AI 큐레이션이 실패할 때
+
+콘솔에 `[STAGEBILL AI] 모든 Gemini 모델 호출 실패` 가 뜨면, 바로 아래 표에 **시도한 모델 / HTTP status / 실패 사유**가 나옵니다. 화면의 오류 문구에도 마지막 시도 정보가 함께 표시됩니다.
+
+| 사유 | 뜻 | 조치 |
+|---|---|---|
+| `EMPTY_OUTPUT finishReason=MAX_TOKENS` | 사고형 모델이 '생각'하는 데 출력 예산을 다 써서 본문이 0자로 돌아옴 | Apps Script를 최신 코드로 재배포 (`thinkingConfig` + `maxOutputTokens: 8192` 적용) |
+| status `429` | 요청 한도 초과 | 몇 분 뒤 재시도. 실패한 모델은 10분간 후순위로 밀림 |
+| status `403` | Generative Language API 미활성화 또는 API 키 제한 | Cloud Console에서 API 활성화 / 키 제한(HTTP·IP) 해제 |
+| status `404` | 모델이 더 이상 제공되지 않음 | ListModels 캐시(6시간)가 만료되면 자동 해소 |
+| status `400` + `API key not valid` | 키 오류 | 스크립트 속성 `GEMINI_API_KEY` 확인 |
+
+> 사고(thinking) 예산은 모델 세대마다 지원 필드가 달라, 2.5 계열은 `thinkingBudget: 0`, 3.x 계열은 `thinkingLevel: "low"`를 보냅니다. 판단이 빗나가 400이 나면 해당 필드를 빼고 같은 모델로 1회 자동 재시도합니다.
+
+### 포스터 이미지가 안 보일 때
+
+콘솔에 같은 403이 수십 줄 반복되면, 대개 **한 작품의 `thumbnail` URL이 여러 카드에 쓰여서**입니다. 깨진 이미지는 자동으로 색상 플레이스홀더로 대체되고, 어떤 작품인지 콘솔에 집계됩니다.
+
+```js
+stagebillThumbnailReport()   // 콘솔에서 언제든 다시 실행
+```
+
+| 작품 | 사용된_카드수 | thumbnail_URL |
+|---|---|---|
+| 서편제, 긴긴밤 | 16 | https://… |
+
+Google Drive 링크라면 공유 설정을 **"링크가 있는 모든 사용자"** 로 바꾸거나, 직접 이미지 URL(`.png` / `.jpg`)로 교체하세요.
+
 ### 번역 누락 진단
 
 사이트를 열고 브라우저 콘솔에서 `[STAGEBILL i18n]` 그룹을 펼치면, **어떤 번역 열이 몇 개 작품에서 비어 있는지** 표로 나옵니다.
@@ -259,6 +287,7 @@ stagebillTranslationReport()   // 콘솔에서 언제든 다시 실행
 ### 브라우저 콘솔 로그
 - `[STAGEBILL]` 데이터 로딩 상태
 - `[STAGEBILL i18n]` 비어 있는 번역 열 요약
+- `[STAGEBILL 이미지]` 불러오지 못한 포스터 URL 집계
 - `[STAGEBILL AI]` 큐레이션 응답 raw 데이터 (실패 시 상세 status / snippet)
 - `[ListModels]` 실제 사용 가능한 Gemini 모델 목록
 
