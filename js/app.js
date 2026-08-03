@@ -1513,15 +1513,28 @@ function setupCatalog() {
 // 히어로 콘텐츠 즉시 적용 (fade 여부 선택)
 function applyHero(m, withFade) {
   const hero = document.getElementById('heroBanner');
+  // 포스터가 없거나 불러오지 못했을 때 쓰는 색상 배경
+  const gradientBg = (mm) => `
+    radial-gradient(ellipse at 70% 40%, ${mm.color || '#555'}44 0%, transparent 70%),
+    linear-gradient(135deg, ${mm.color || '#555'}22 0%, var(--bg-primary) 100%)
+  `;
+
   const doApply = () => {
     currentHeroMusical = m;
     if (m.thumbnail) {
       hero.style.background = `url("${m.thumbnail}") center top / cover no-repeat`;
+      // CSS background 는 오류 이벤트가 없어 깨져도 빈 화면만 남는다.
+      // 별도로 한 번 로드해 보고 실패하면 색상 배경으로 되돌린다.
+      const probe = new Image();
+      probe.onerror = () => {
+        recordBrokenThumbnail(m.thumbnail, getLocalizedTitle(m));
+        if (currentHeroMusical && currentHeroMusical.id === m.id) {
+          hero.style.background = gradientBg(m);
+        }
+      };
+      probe.src = m.thumbnail;
     } else {
-      hero.style.background = `
-        radial-gradient(ellipse at 70% 40%, ${m.color}44 0%, transparent 70%),
-        linear-gradient(135deg, ${m.color}22 0%, var(--bg-primary) 100%)
-      `;
+      hero.style.background = gradientBg(m);
     }
     document.getElementById('heroTitle').textContent = getLocalizedField(m, 'title');
     document.getElementById('heroDescription').textContent = getLocalizedField(m, 'description');
@@ -1859,7 +1872,7 @@ function createCardHTML(m) {
 
   const title = getLocalizedTitle(m);
   const thumbnailInner = m.thumbnail
-    ? `<img src="${m.thumbnail}" alt="${escapeHtml(title)}" class="card-poster" loading="lazy">`
+    ? `<img src="${m.thumbnail}" alt="${escapeHtml(title)}" class="card-poster" loading="lazy" onerror="handlePosterError(this, '${m.id}')">`
     : `<div class="card-pattern"></div><span class="card-title-display">${escapeHtml(title)}</span>`;
 
   const thumbnailStyle = m.thumbnail
@@ -1886,6 +1899,64 @@ function createCardHTML(m) {
     </div>
   `;
 }
+
+// ── 포스터 이미지 오류 처리 ──────────────────────────────────────────
+// thumbnail URL이 403/404를 내면(비공개 Google Drive 링크, 만료된 호스트 등)
+// 깨진 이미지 아이콘 대신 색상 플레이스홀더로 대체하고, 어떤 작품인지 기록한다.
+// 같은 URL이 여러 카드에 쓰이면 콘솔에 같은 403이 수십 줄 찍히므로 URL 단위로 집계한다.
+const _brokenThumbnails = new Map(); // url → { titles:Set, count:number }
+
+function recordBrokenThumbnail(url, title) {
+  if (!url) return;
+  if (!_brokenThumbnails.has(url)) _brokenThumbnails.set(url, { titles: new Set(), count: 0 });
+  const entry = _brokenThumbnails.get(url);
+  entry.count++;
+  if (title) entry.titles.add(title);
+  scheduleThumbnailReport();
+}
+
+let _thumbReportTimer = null;
+let _reportedThumbCount = 0;
+function scheduleThumbnailReport() {
+  clearTimeout(_thumbReportTimer);
+  _thumbReportTimer = setTimeout(() => {
+    // 화면을 다시 그릴 때마다 같은 내용을 반복 출력하지 않도록, 새 URL이 생겼을 때만 알린다
+    if (_brokenThumbnails.size <= _reportedThumbCount) return;
+    _reportedThumbCount = _brokenThumbnails.size;
+    stagebillThumbnailReport();
+  }, 1500);
+}
+
+function stagebillThumbnailReport() {
+  if (_brokenThumbnails.size === 0) {
+    console.log('[STAGEBILL 이미지] 불러오지 못한 포스터가 없습니다.');
+    return [];
+  }
+  const rows = [..._brokenThumbnails.entries()].map(([url, v]) => ({
+    작품: [...v.titles].join(', '),
+    사용된_카드수: v.count,
+    thumbnail_URL: url,
+  }));
+  console.groupCollapsed(`[STAGEBILL 이미지] 불러오지 못한 포스터 ${rows.length}건 — 시트의 thumbnail 열을 확인하세요`);
+  console.table(rows);
+  console.info('Google Drive 링크라면 공유 설정을 "링크가 있는 모든 사용자"로 바꾸거나, 직접 이미지 URL(.png/.jpg)로 교체하세요.');
+  console.groupEnd();
+  return rows;
+}
+if (typeof window !== 'undefined') window.stagebillThumbnailReport = stagebillThumbnailReport;
+
+function handlePosterError(img, id) {
+  const m = musicals.find(x => String(x.id) === String(id));
+  recordBrokenThumbnail(img.getAttribute('src'), m ? getLocalizedTitle(m) : '');
+  const wrap = img.parentElement;
+  if (!wrap) { img.remove(); return; }
+  const color = (m && m.color) || '#555';
+  const title = m ? getLocalizedTitle(m) : (img.alt || '');
+  wrap.classList.remove('has-image');
+  wrap.style.background = `linear-gradient(135deg, ${color}cc, ${color}44)`;
+  wrap.innerHTML = `<div class="card-pattern"></div><span class="card-title-display">${escapeHtml(title)}</span>`;
+}
+if (typeof window !== 'undefined') window.handlePosterError = handlePosterError;
 
 function attachCardEvents(container) {
   container.querySelectorAll('.card').forEach(card => {
@@ -2387,20 +2458,38 @@ async function submitAICuration() {
       return;
     }
     if (data.error === 'ALL_MODELS_FAILED') {
-      console.error('[STAGEBILL AI] 모든 Gemini 모델 호출 실패:', data.attempts);
+      // 콘솔에서 접어놓은 객체를 펼치지 않아도 원인이 보이도록 표로 출력
+      const attempts = Array.isArray(data.attempts) ? data.attempts : [];
+      console.error('[STAGEBILL AI] 모든 Gemini 모델 호출 실패');
+      if (console.table && attempts.length) console.table(attempts);
+      else console.error(attempts);
       console.error('[STAGEBILL AI] 사용 가능했던 모델 목록:', data.availableModels);
+
       const status = data.lastStatus;
+      const snippet = String(data.lastSnippet || '');
+      const emptyOutput = attempts.some(a => a && a.emptyOutput) || /EMPTY_OUTPUT/.test(snippet);
+
       let title = 'AI 호출에 실패했어요.';
-      let sub   = '콘솔(F12)에서 상세 에러를 확인해주세요.';
-      if (status === 403) {
+      // 마지막 시도의 상태·사유를 그대로 보여준다 (콘솔을 못 여는 상황 대비)
+      let sub   = `마지막 시도: ${attempts.length ? attempts[attempts.length - 1].model : '?'} / status ${status}\n${snippet.substring(0, 200)}`;
+
+      if (emptyOutput) {
+        title = 'AI가 답을 다 쓰지 못했어요.';
+        sub = '모델이 생각하는 데 출력 예산을 다 써서 본문이 비어 돌아왔습니다.\n'
+            + 'Apps Script를 최신 코드로 다시 배포하면 해결됩니다.\n'
+            + '(배포 관리 → 편집 → 새 버전 → 배포)';
+      } else if (status === 403) {
         title = 'Gemini API 사용 권한이 없어요.';
         sub = 'Google Cloud Console에서 Generative Language API를 활성화하거나,\nAPI 키 제한(HTTP/IP)을 해제해주세요.';
       } else if (status === 429) {
         title = '잠시 후 다시 시도해주세요.';
-        sub = '분당 요청 한도를 초과했습니다.';
+        sub = '요청 한도를 초과했습니다. 몇 분 뒤 다시 시도해주세요.';
+      } else if (status === 404) {
+        title = '모델을 찾을 수 없어요.';
+        sub = '시도한 모델이 더 이상 제공되지 않습니다.\n' + snippet.substring(0, 200);
       } else if (status === 400) {
         title = '요청 형식 오류.';
-        sub = (data.lastSnippet || '').substring(0, 200);
+        sub = snippet.substring(0, 200);
       }
       showAIError('😵', title, sub);
       return;

@@ -79,7 +79,7 @@ function onFormSubmit(e) {
 }
 
 // 배포 검증용 — 이 문자열이 ?action=ping 응답에 그대로 나오면 새 코드가 배포된 것
-const SCRIPT_VERSION = '2026-07-01-curation-v9-min-calls';
+const SCRIPT_VERSION = '2026-08-03-curation-v10-thinking-fix';
 
 // 진단용: Apps Script 에디터에서 함수 선택 → ▶ 실행 → 보기 → 로그
 // "이 프로젝트가 정말 STAGEBILL이 호출하는 그 프로젝트인가?"를 확인할 때 사용
@@ -316,7 +316,12 @@ function handleAICuration(params) {
     const attempts = [];
     for (const model of modelsToTry) {
       const result = callGemini(apiKey, model, prompt);
-      attempts.push({ model: model, status: result.status, snippet: result.snippet });
+      attempts.push({
+        model: model,
+        status: result.status,
+        emptyOutput: !!result.emptyOutput,
+        snippet: result.snippet,
+      });
       Logger.log('[Gemini] ' + model + ' → status=' + result.status + ' / ' + (result.snippet || ''));
       if (result.invalidKey)    return jsonResponse({ error: 'INVALID_KEY', attempts: attempts });
       if (result.quotaExceeded || result.error) {
@@ -403,22 +408,40 @@ ${outputLang}로 응답하세요. 작품명(title)은 데이터의 "${titleField
 {"recommendations":[{"id":"작품ID","title":"작품명(선택된 언어)","reason":"추천 이유 1-2문장(선택된 언어로)","tip":"수업/연수 활용 아이디어 1문장(선택된 언어로)"}],"external":[{"title":"작품명(선택된 언어)","origin":"KR 또는 INTL","reason":"조건과 어떤 점이 관련 있는지 1-2문장(선택된 언어로)"}]}`;
 }
 
-function callGemini(apiKey, model, prompt) {
+// 사고(thinking) 예산 설정 — 모델 세대마다 지원 필드가 다르다.
+//   · 2.5 계열   : thinkingBudget: 0 으로 사고 비활성화
+//   · 3.x 계열   : thinkingBudget 미지원, thinkingLevel 사용
+//   · 1.5/2.0 계열: 사고 기능 자체가 없어 필드를 보내면 400
+// 판단이 빗나가도 callGemini가 400을 받으면 thinkingConfig 없이 1회 재시도한다.
+function buildThinkingConfig(model) {
+  if (/gemini-(1\.5|2\.0)/.test(model)) return null;
+  if (/gemini-3/.test(model)) return { thinkingLevel: 'low' };
+  return { thinkingBudget: 0 };
+}
+
+function callGemini(apiKey, model, prompt, opts) {
+  opts = opts || {};
   try {
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
               + model + ':generateContent?key=' + apiKey;
+
+    const generationConfig = {
+      temperature: 0.7,
+      // 사고형 모델은 이 예산에서 '사고 토큰'을 먼저 소모한다.
+      // 4096으로는 사고만 하다 예산이 바닥나 본문이 0자로 돌아오는 일이 잦았다
+      // (HTTP 200 + finishReason=MAX_TOKENS + 텍스트 파트 없음).
+      maxOutputTokens: 8192,
+      responseMimeType: 'application/json',
+    };
+    const thinking = opts.noThinking ? null : buildThinkingConfig(model);
+    if (thinking) generationConfig.thinkingConfig = thinking;
+
     const options = {
       method: 'post',
       contentType: 'application/json',
       payload: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          // 출력 토큰 수가 LLM 지연을 좌우함. 데이터셋 규모(수십 개)와 간결한 reason 기준
-          // 실제 출력은 ~2K 토큰 이내라 4096이면 잘림 없이 충분하며 최악 지연을 절반으로 줄임
-          maxOutputTokens: 4096,
-          responseMimeType: 'application/json',
-        },
+        generationConfig: generationConfig,
       }),
       muteHttpExceptions: true,
     };
@@ -432,13 +455,32 @@ function callGemini(apiKey, model, prompt) {
     if (status === 400 && /API_KEY_INVALID|API key not valid/i.test(body)) {
       return { invalidKey: true, status: status, snippet: snippet };
     }
+    // thinkingConfig 미지원 모델이면 해당 필드를 빼고 같은 모델로 1회 재시도
+    if (status === 400 && !opts.noThinking && /thinking(Config|Budget|Level)/i.test(body)) {
+      Logger.log('[Gemini] ' + model + ' thinkingConfig 미지원 → 제외하고 재시도');
+      return callGemini(apiKey, model, prompt, { noThinking: true });
+    }
     if (status === 429) return { quotaExceeded: true, status: status, snippet: snippet };
     if (status !== 200) return { error: true, status: status, snippet: snippet };
 
-    const data  = JSON.parse(body);
-    const parts = ((data.candidates || [])[0]?.content?.parts) || [];
-    const text  = parts.filter(p => !p.thought).map(p => p.text || '').join('').trim();
-    if (!text) return { error: true, status: status, snippet: 'empty text in candidates' };
+    const data      = JSON.parse(body);
+    const candidate = (data.candidates || [])[0] || {};
+    const parts     = (candidate.content && candidate.content.parts) || [];
+    const text      = parts.filter(p => !p.thought).map(p => p.text || '').join('').trim();
+    if (!text) {
+      // 왜 비었는지가 진단의 핵심이라 finishReason·토큰 사용량을 함께 남긴다
+      const usage  = data.usageMetadata || {};
+      const reason = candidate.finishReason || 'UNKNOWN';
+      return {
+        error: true,
+        status: status,
+        emptyOutput: true,
+        snippet: 'EMPTY_OUTPUT finishReason=' + reason
+               + ' thoughts=' + (usage.thoughtsTokenCount || 0)
+               + ' output=' + (usage.candidatesTokenCount || 0)
+               + (candidate.safetyRatings ? ' safety=' + JSON.stringify(candidate.safetyRatings).substring(0, 120) : ''),
+      };
+    }
 
     let parsed;
     try {
