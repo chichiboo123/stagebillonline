@@ -2484,6 +2484,11 @@ async function submitAICuration() {
       } else if (status === 429) {
         title = '잠시 후 다시 시도해주세요.';
         sub = '요청 한도를 초과했습니다. 몇 분 뒤 다시 시도해주세요.';
+      } else if (status === 503 || status === 500 || status === 504) {
+        // Google 측 일시적 과부하 — 실패한 모델은 서버에서 10분간 후순위로 밀리므로 재시도 시 다른 모델을 먼저 쓴다
+        title = '지금 AI 서버가 붐비고 있어요.';
+        sub = 'Gemini에 요청이 몰려 잠시 응답하지 못했어요.\n1~2분 뒤 [다시 검색하기]를 누르면 다른 모델로 시도합니다.\n'
+            + `(시도한 모델: ${attempts.map(a => a.model).join(', ') || '?'})`;
       } else if (status === 404) {
         title = '모델을 찾을 수 없어요.';
         sub = '시도한 모델이 더 이상 제공되지 않습니다.\n' + snippet.substring(0, 200);
