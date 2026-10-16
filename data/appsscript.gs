@@ -79,7 +79,7 @@ function onFormSubmit(e) {
 }
 
 // 배포 검증용 — 이 문자열이 ?action=ping 응답에 그대로 나오면 새 코드가 배포된 것
-const SCRIPT_VERSION = '2026-08-03-curation-v10-thinking-fix';
+const SCRIPT_VERSION = '2026-10-16-curation-v11-overload-fallback';
 
 // 진단용: Apps Script 에디터에서 함수 선택 → ▶ 실행 → 보기 → 로그
 // "이 프로젝트가 정말 STAGEBILL이 호출하는 그 프로젝트인가?"를 확인할 때 사용
@@ -152,7 +152,7 @@ const LAST_GOOD_MODEL_KEY = 'stagebill_last_good_model_v1';
 const MODEL_COOLDOWN_PREFIX = 'stagebill_model_cd_';
 const MODEL_COOLDOWN_TTL = 600; // 10분(초)
 // 한 요청에서 시도하는 최대 모델 수 — 실패 시 헛되이 소모되는 호출을 제한
-const MAX_MODEL_ATTEMPTS = 3;
+const MAX_MODEL_ATTEMPTS = 4;
 
 // 큐레이션용 압축 작품 목록 캐시 (시트 읽기는 요청마다 1~3초 소요)
 const MUSICAL_LIST_CACHE_KEY = 'stagebill_compact_list_v1';
@@ -230,7 +230,50 @@ function orderModelsForAttempt(rankedModels, cache) {
   models.forEach(m => {
     (cache.get(MODEL_COOLDOWN_PREFIX + m) ? cold : hot).push(m);
   });
-  return hot.concat(cold); // 전부 쿨다운이어도 시도는 함 (완전 차단 방지)
+  return { models: hot.concat(cold), cold: cold }; // 전부 쿨다운이어도 시도는 함 (완전 차단 방지)
+}
+
+// 모델 계열 — 같은 세대 모델은 서버 자원을 공유하는 경우가 많아 과부하(503) 때 함께 실패한다.
+//   gemini-3.6-flash → gemini-3 / gemini-2.5-flash-lite → gemini-2
+//   gemini-flash-latest 같은 별칭은 목록에 있는 가장 최신 세대를 가리키는 것으로 본다.
+function modelFamily(model, latestMajor) {
+  const name = String(model);
+  const m = name.match(/^([a-z]+)-(\d+)/);
+  if (m) return m[1] + '-' + m[2];
+  return name.split('-')[0] + '-' + latestMajor;
+}
+
+function isPreferredModel(model) {
+  return MODEL_PRIORITY.some(re => re.test(model))
+      && !/(-exp|-preview|-thinking|-image|-tts|-native-audio)/.test(model);
+}
+
+// 시도할 모델 선정: 서로 다른 계열의 우선순위 모델을 먼저 고르고, 남는 자리는 순서대로 채운다.
+//   예) [flash-latest, 3.6-flash, 3.5-flash, 2.5-flash, 2.5-flash-lite]
+//     → [flash-latest, 2.5-flash, 3.6-flash, 3.5-flash]
+//   → 최신 세대 전체가 과부하여도 한 요청 안에서 구세대 모델로 넘어가 응답할 수 있다.
+function pickModelsToTry(ordered, max) {
+  const majors = ordered.models
+    .map(m => (String(m).match(/^gemini-(\d+)/) || [])[1])
+    .filter(Boolean)
+    .map(Number);
+  const latestMajor = majors.length ? Math.max.apply(null, majors) : 0;
+
+  const picked = [];
+  const families = {};
+  ordered.models.forEach(m => {
+    if (picked.length >= max || ordered.cold.indexOf(m) >= 0 || !isPreferredModel(m)) return;
+    const fam = modelFamily(m, latestMajor);
+    if (families[fam]) return;
+    families[fam] = true;
+    picked.push(m);
+  });
+  // 남는 자리: 우선순위 모델(쿨다운 포함) → 그 외 모델 순
+  const rest = ordered.models.filter(m => picked.indexOf(m) < 0);
+  rest.filter(isPreferredModel)
+    .concat(rest.filter(m => !isPreferredModel(m)))
+    .forEach(m => { if (picked.length < max) picked.push(m); });
+  return picked;
 }
 
 // 큐레이션 프롬프트용 압축 작품 목록 — 시트 읽기(1~3초)를 30분 캐시로 대체
@@ -311,8 +354,11 @@ function handleAICuration(params) {
     // 시도 순서 최적화:
     //   1) 직전에 성공한 모델을 맨 앞으로 (거의 항상 1회 호출로 끝남)
     //   2) 최근 실패(쿨다운 중)한 모델은 뒤로 미룸 → 헛 호출 방지
-    const modelsToTry = orderModelsForAttempt(listResult.models, resultCache)
-      .slice(0, MAX_MODEL_ATTEMPTS);
+    //   3) 서로 다른 계열(3.x / 2.x …)을 먼저 섞어서 시도 → 한 세대 전체 과부하(503)에 대비
+    const modelsToTry = pickModelsToTry(
+      orderModelsForAttempt(listResult.models, resultCache),
+      MAX_MODEL_ATTEMPTS
+    );
     const attempts = [];
     for (const model of modelsToTry) {
       const result = callGemini(apiKey, model, prompt);
