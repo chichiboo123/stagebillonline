@@ -111,6 +111,9 @@ stagebillonline/
 │   ├── sample_template.csv # 스프레드시트 헤더/입력 예시
 │   ├── convert_csv.py      # CSV → 시트 입력 형식 변환 보조 스크립트
 │   └── musicals.json       # (미사용/플레이스홀더) 실데이터는 Google Sheets에서 로드
+├── terms.html              # 이용약관 (푸터 링크)
+├── privacy.html            # 개인정보 처리방침 (푸터 링크)
+├── css/legal.css           # 약관·처리방침 페이지 전용 스타일
 ├── CNAME                   # GitHub Pages 커스텀 도메인 (stagebill.chichiboo.link)
 └── favicon.svg
 ```
@@ -290,6 +293,24 @@ stagebillTranslationReport()   // 콘솔에서 언제든 다시 실행
 - `[STAGEBILL 이미지]` 불러오지 못한 포스터 URL 집계
 - `[STAGEBILL AI]` 큐레이션 응답 raw 데이터 (실패 시 상세 status / snippet)
 - `[ListModels]` 실제 사용 가능한 Gemini 모델 목록
+
+---
+
+## 이용약관 · 개인정보 처리방침
+
+푸터의 **이용약관**(`terms.html`)과 **개인정보 처리방침**(`privacy.html`) 링크로 열람합니다. 처리방침 링크는 다른 링크와 구분되도록 굵게 표시합니다(개인정보보호위원회 처리방침 작성지침).
+
+처리방침은 「개인정보 보호법」 제30조·시행령 제31조의 기재 사항과 제28조의8(국외 이전) 공개 사항을 기준으로 작성했습니다. 아래가 바뀌면 **처리방침도 함께 고치세요.**
+
+| 바뀌는 것 | 고칠 곳 |
+|---|---|
+| 업로드 Google Form 질문 항목(특히 이메일·연락처 수집 여부) | 제1조 표 · 주요 처리 표시 |
+| AI 결과 캐시 기간(`CURATION_RESULT_TTL`, `AI_RESULT_CACHE_TTL`/`_MAX`) | 제1조 표 · 제7조 |
+| 외부 스크립트·폰트·이미지 호스팅 추가, 분석 도구·쿠키 도입 | 제7조 · 제8조 |
+| 호스팅·AI 제공자 변경 | 제3조(위탁·국외 이전) |
+| 개인정보 보호책임자·연락처 | 제11조 |
+
+개정할 때는 시행일과 제13조를 갱신하고, 시행 7일 전(중요 변경은 30일 전)부터 공지하세요. 이전 버전은 GitHub 커밋 이력으로 남습니다.
 
 ---
 
